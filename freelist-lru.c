@@ -253,50 +253,36 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		UnlockBufHdr(buf);
 	}
 
-	/* Nothing on the freelist, so run the "clock sweep" algorithm */
-	trycounter = NBuffers;
+	/* Nothing on the freelist, so run the LRU algorithm */
+	//trycounter = NBuffers;
+	// initialized cur node to the least recently used( the tail of the stack) 
+	assert(LRU_Stack!= NULL);
+	Node* curNode = LRU_Stack->tail;
 	for (;;)
 	{
-		buf = &BufferDescriptors[StrategyControl->nextVictimBuffer];
-
-		if (++StrategyControl->nextVictimBuffer >= NBuffers)
-		{
-			StrategyControl->nextVictimBuffer = 0;
-			StrategyControl->completePasses++;
-		}
-
-		/*
-		 * If the buffer is pinned or has a nonzero usage_count, we cannot use
-		 * it; decrement the usage_count (unless pinned) and keep scanning.
-		 */
-		LockBufHdr(buf);
-		if (buf->refcount == 0)
-		{
-			if (buf->usage_count > 0)
-			{
-				buf->usage_count--;
-				trycounter = NBuffers;
-			}
-			else
-			{
-				/* Found a usable buffer */
-				if (strategy != NULL)
-					AddBufferToRing(strategy, buf);
-				return buf;
-			}
-		}
-		else if (--trycounter == 0)
+		if (curNode == NULL)
 		{
 			/*
-			 * We've scanned all the buffers without making any state changes,
-			 * so all the buffers are pinned (or were when we looked at them).
-			 * We could hope that someone will free one eventually, but it's
-			 * probably better to fail than to risk getting stuck in an
-			 * infinite loop.
-			 */
+			* We've scanned all the buffers without making any state changes,
+			* so all the buffers are pinned (or were when we looked at them).
+			* We could hope that someone will free one eventually, but it's
+			* probably better to fail than to risk getting stuck in an
+			* infinite loop.
+			*/
 			UnlockBufHdr(buf);
 			elog(ERROR, "no unpinned buffers available");
 		}
+		buf = &BufferDescriptors[curNode->buf_id];
+		/*
+		 * If the buffer is pinned , we cannot use
+		 * move to the next least recently used buffer
+		 */
+		LockBufHdr(buf);
+		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
+		{
+			return buf;
+		}
+		curNode=curNode->prev;
 		UnlockBufHdr(buf);
 	}
 }
