@@ -123,6 +123,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		assert(LRU_Control != NULL);
 		LRU_Control->head = curNode;
 		LRU_Control->tail = curNode;
+		size++;
 	} else{
 		// Find the Node in the Stack
 		curNode = LRU_Control->head;
@@ -138,6 +139,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			curNode->prev = NULL;
 			LRU_Control->head->prev = curNode;
 			LRU_Control->head = curNode;
+			size++;
 		} else if (curNode == LRU_Control->head){ 
 			// If it is head -> no need to do anything
 		}
@@ -254,7 +256,6 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	}
 
 	/* Nothing on the freelist, so run the LRU algorithm */
-	//trycounter = NBuffers;
 	// initialized cur node to the least recently used( the tail of the stack) 
 	assert(LRU_Stack!= NULL);
 	Node* curNode = LRU_Stack->tail;
@@ -287,6 +288,38 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	}
 }
 
+void DeleteLRU_Stack(int buf_id){
+	/* CS3223, delete the Node from LRU Stack*/
+	// First we find the position of the node with the corresponding buf_id
+	Node* curNode = LRU_Stack->head;
+	while (curNode != NULL && curNode->buf_id != buf->buf_id) 
+		curNode = curNode->next;
+	assert(curNode != NULL);
+	if (size==1){
+		head = NULL;
+		tail = NULL;
+	} else {
+		if (curNode == head){
+			head = curNode->next;
+			assert(head!=NULL);
+			head->prev = NULL;
+		} else if (curNode == tail){
+			tail = curNode->prev;
+			assert(tail!=NULL);
+			tail->next = NULL;
+		} else {
+			assert(curNode->prev!=NULL);
+			assert(curNode->next!=NULL);
+			curNode->prev->next = curNode->next;
+			curNode->next->prev = curNode->prev;
+		}
+	}
+	curNode->next = NULL;
+	curNode->prev = NULL;
+	free(curNode);
+	size--;
+}
+
 /*
  * StrategyFreeBuffer: put a buffer on the freelist
  */
@@ -305,6 +338,7 @@ StrategyFreeBuffer(volatile BufferDesc *buf)
 		if (buf->freeNext < 0)
 			StrategyControl->lastFreeBuffer = buf->buf_id;
 		StrategyControl->firstFreeBuffer = buf->buf_id;
+		DeleteLRU_Stack(buf->buf_id);
 	}
 
 	LWLockRelease(BufFreelistLock);
