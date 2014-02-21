@@ -84,7 +84,20 @@ typedef struct BufferAccessStrategyData
 	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
 }	BufferAccessStrategyData;
 
+typedef struct Node{
+	int buf_id;
+	Node *next;
+	Node *prev;
+} Node;
 
+typedef struct LRU_Stack{
+	Node *head;
+	Node *tail;
+	int size;
+} LRU_Stack;
+
+/* LRU_Stack for the buffer pool */
+static LRU_Stack* LRU_Control = NULL;
 /* Prototypes for internal functions */
 static volatile BufferDesc *GetBufferFromRing(BufferAccessStrategy strategy);
 static void AddBufferToRing(BufferAccessStrategy strategy,
@@ -97,7 +110,50 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
 void 
 StrategyUpdateAccessedBuffer(int buf_id)
 {
-	// to be implemented!
+	Node *curNode = 0;
+	// if LRU_Stack is empty -> insert the head
+	if (size==0){
+		// Create new node
+		curNode = malloc(sizeof(Node));
+		assert(curNode!= NULL);
+		curNode->buf_id = buf_id;
+		curNode->next = 0;
+		curNode->prev = 0;
+		// Insert node to head
+		assert(LRU_Control != NULL);
+		LRU_Control->head = curNode;
+		LRU_Control->tail = curNode;
+	} else{
+		// Find the Node in the Stack
+		curNode = LRU_Control->head;
+		while (curNode!= NULL && curNode->buf_id != buf_id) 
+			curNode = curNode->next;
+		
+		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
+			// Create new node and insert to the top of the Stack
+			curNode = malloc(sizeof(Node));
+			assert(curNode!= NULL);
+			curNode->buf_id = buf_id;
+			curNode->next = LRU_Control->head;
+			curNode->prev = NULL;
+			LRU_Control->head->prev = curNode;
+			LRU_Control->head = curNode;
+		} else if (curNode == LRU_Control->head){ 
+			// If it is head -> no need to do anything
+		}
+		else {
+			curNode->prev->next = curNode->next;
+			if (curNode == LRU_Control->tail){// If it is the tail->update new tail
+				tail = curNode->prev;
+			} else {
+				curNode->next->prev = curNode->prev;
+			}
+			curNode->prev = NULL;
+			curNode->next = LRU_Control->head;
+			LRU_Control->head->prev = curNode;
+			LRU_Control->head = curNode;
+		}
+	}
 }
 
 
