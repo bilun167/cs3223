@@ -84,15 +84,15 @@ typedef struct BufferAccessStrategyData
 	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
 }	BufferAccessStrategyData;
 
-typedef struct Node{
+typedef struct StackNode{
 	int buf_id;
-	Node *next;
-	Node *prev;
-} Node;
+	StackNode *next;
+	StackNode *prev;
+} StackNode;
 
 typedef struct LRU_Stack{
-	Node *head;
-	Node *tail;
+	StackNode *head;
+	StackNode *tail;
 	int size;
 } LRU_Stack;
 
@@ -110,11 +110,11 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
 void 
 StrategyUpdateAccessedBuffer(int buf_id)
 {
-	Node *curNode = 0;
+	StackNode *curNode = 0;
 	// if LRU_Stack is empty -> insert the head
 	if (size==0){
 		// Create new node
-		curNode = malloc(sizeof(Node));
+		curNode = malloc(sizeof(StackNode));
 		assert(curNode!= NULL);
 		curNode->buf_id = buf_id;
 		curNode->next = 0;
@@ -132,7 +132,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		
 		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
 			// Create new node and insert to the top of the Stack
-			curNode = malloc(sizeof(Node));
+			curNode = malloc(sizeof(StackNode));
 			assert(curNode!= NULL);
 			curNode->buf_id = buf_id;
 			curNode->next = LRU_Control->head;
@@ -258,7 +258,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
 	assert(LRU_Stack!= NULL);
-	Node* curNode = LRU_Stack->tail;
+	StackNode* curNode = LRU_Stack->tail;
 	for (;;)
 	{
 		if (curNode == NULL)
@@ -291,7 +291,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
-	Node* curNode = LRU_Stack->head;
+	StackNode* curNode = LRU_Stack->head;
 	while (curNode != NULL && curNode->buf_id != buf->buf_id) 
 		curNode = curNode->next;
 	assert(curNode != NULL);
