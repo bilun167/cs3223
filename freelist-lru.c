@@ -117,12 +117,12 @@ StrategyUpdateAccessedBuffer(int buf_id)
 	if (LRU_Control->size==0){
 		// Create new node
 		curNode = malloc(sizeof(StackNode));
-		assert(curNode!= NULL);
+		Assert(curNode!= NULL);
 		curNode->buf_id = buf_id;
 		curNode->next = 0;
 		curNode->prev = 0;
 		// Insert node to head
-		assert(LRU_Control != NULL);
+		Assert(LRU_Control != NULL);
 		LRU_Control->head = curNode;
 		LRU_Control->tail = curNode;
 		LRU_Control->size++;
@@ -135,7 +135,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
 			// Create new node and insert to the top of the Stack
 			curNode = malloc(sizeof(StackNode));
-			assert(curNode!= NULL);
+			Assert(curNode!= NULL);
 			curNode->buf_id = buf_id;
 			curNode->next = LRU_Control->head;
 			curNode->prev = NULL;
@@ -183,7 +183,6 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
-	int			trycounter;
 
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
@@ -252,6 +251,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		{
 			if (strategy != NULL)
 				AddBufferToRing(strategy, buf);
+			StrategyUpdateAccessedBuffer(buf->buf_id);
 			return buf;
 		}
 		UnlockBufHdr(buf);
@@ -259,7 +259,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	assert(LRU_Control!= NULL);
+	Assert(LRU_Control!= NULL);
 	StackNode* curNode = LRU_Control->tail;
 	for (;;)
 	{
@@ -283,6 +283,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		LockBufHdr(buf);
 		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
 		{
+			StrategyUpdateAccessedBuffer(curNode->buf_id);
 			return buf;
 		}
 		curNode=curNode->prev;
@@ -296,22 +297,22 @@ void DeleteLRU_Stack(int buf_id){
 	StackNode* curNode = LRU_Control->head;
 	while (curNode != NULL && curNode->buf_id != buf_id) 
 		curNode = curNode->next;
-	assert(curNode != NULL);
+	Assert(curNode != NULL);
 	if (LRU_Control->size==1){
 		LRU_Control->head = NULL;
 		LRU_Control->tail = NULL;
 	} else {
 		if (curNode == LRU_Control->head){
 			LRU_Control->head = curNode->next;
-			assert(LRU_Control->head!=NULL);
+			Assert(LRU_Control->head!=NULL);
 			LRU_Control->head->prev = NULL;
 		} else if (curNode == LRU_Control->tail){
 			LRU_Control->tail = curNode->prev;
-			assert(LRU_Control->tail!=NULL);
+			Assert(LRU_Control->tail!=NULL);
 			LRU_Control->tail->next = NULL;
 		} else {
-			assert(curNode->prev!=NULL);
-			assert(curNode->next!=NULL);
+			Assert(curNode->prev!=NULL);
+			Assert(curNode->next!=NULL);
 			curNode->prev->next = curNode->next;
 			curNode->next->prev = curNode->prev;
 		}
@@ -480,6 +481,9 @@ StrategyInitialize(bool init)
 
 	// CS3223: initialize the LRU stack
 	LRU_Control = malloc(sizeof(LRU_Stack));
+	LRU_Control->size = 0;
+	LRU_Control->head = NULL;
+	LRU_Control->tail = NULL;
 }
 
 
