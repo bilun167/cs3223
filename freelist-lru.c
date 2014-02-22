@@ -141,7 +141,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			curNode->prev = NULL;
 			LRU_Control->head->prev = curNode;
 			LRU_Control->head = curNode;
-			size++;
+			LRU_Control->size++;
 		} else if (curNode == LRU_Control->head){ 
 			// If it is head -> no need to do anything
 		}
@@ -301,11 +301,11 @@ void DeleteLRU_Stack(int buf_id){
 		LRU_Control->head = NULL;
 		LRU_Control->tail = NULL;
 	} else {
-		if (curNode == head){
+		if (curNode == LRU_Control->head){
 			LRU_Control->head = curNode->next;
 			assert(head!=NULL);
 			LRU_Control->head->prev = NULL;
-		} else if (curNode == tail){
+		} else if (curNode == LRU_Control->tail){
 			LRU_Control->tail = curNode->prev;
 			assert(tail!=NULL);
 			LRU_Control->tail->next = NULL;
