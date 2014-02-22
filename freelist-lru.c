@@ -303,11 +303,11 @@ void DeleteLRU_Stack(int buf_id){
 	} else {
 		if (curNode == LRU_Control->head){
 			LRU_Control->head = curNode->next;
-			assert(head!=NULL);
+			assert(LRU_Control->head!=NULL);
 			LRU_Control->head->prev = NULL;
 		} else if (curNode == LRU_Control->tail){
 			LRU_Control->tail = curNode->prev;
-			assert(tail!=NULL);
+			assert(LRU_Control->tail!=NULL);
 			LRU_Control->tail->next = NULL;
 		} else {
 			assert(curNode->prev!=NULL);
