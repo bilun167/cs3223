@@ -84,11 +84,13 @@ typedef struct BufferAccessStrategyData
 	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
 }	BufferAccessStrategyData;
 
-typedef struct StackNode{
+struct StackNode{
 	int buf_id;
-	StackNode *next;
-	StackNode *prev;
-} StackNode;
+	struct StackNode *next;
+	struct StackNode *prev;
+};
+
+typedef struct StackNode StackNode;
 
 typedef struct LRU_Stack{
 	StackNode *head;
