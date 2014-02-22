@@ -475,6 +475,9 @@ StrategyInitialize(bool init)
 	}
 	else
 		Assert(!init);
+
+	// CS3223: initialize the LRU stack
+	LRU_Control = malloc(sizeof(LRU_Stack));
 }
 
 
