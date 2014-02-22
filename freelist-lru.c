@@ -112,7 +112,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
 	// if LRU_Stack is empty -> insert the head
-	if (size==0){
+	if (LRU_Control->size==0){
 		// Create new node
 		curNode = malloc(sizeof(StackNode));
 		assert(curNode!= NULL);
@@ -123,7 +123,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		assert(LRU_Control != NULL);
 		LRU_Control->head = curNode;
 		LRU_Control->tail = curNode;
-		size++;
+		LRU_Control->size++;
 	} else{
 		// Find the Node in the Stack
 		curNode = LRU_Control->head;
@@ -146,7 +146,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		else {
 			curNode->prev->next = curNode->next;
 			if (curNode == LRU_Control->tail){// If it is the tail->update new tail
-				tail = curNode->prev;
+				LRU_Control->tail = curNode->prev;
 			} else {
 				curNode->next->prev = curNode->prev;
 			}
@@ -257,8 +257,8 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	assert(LRU_Stack!= NULL);
-	StackNode* curNode = LRU_Stack->tail;
+	assert(LRU_Control!= NULL);
+	StackNode* curNode = LRU_Control->tail;
 	for (;;)
 	{
 		if (curNode == NULL)
@@ -291,22 +291,22 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
-	StackNode* curNode = LRU_Stack->head;
-	while (curNode != NULL && curNode->buf_id != buf->buf_id) 
+	StackNode* curNode = LRU_Control->head;
+	while (curNode != NULL && curNode->buf_id != buf_id) 
 		curNode = curNode->next;
 	assert(curNode != NULL);
-	if (size==1){
-		head = NULL;
-		tail = NULL;
+	if (LRU_Control->size==1){
+		LRU_Control->head = NULL;
+		LRU_Control->tail = NULL;
 	} else {
 		if (curNode == head){
-			head = curNode->next;
+			LRU_Control->head = curNode->next;
 			assert(head!=NULL);
-			head->prev = NULL;
+			LRU_Control->head->prev = NULL;
 		} else if (curNode == tail){
-			tail = curNode->prev;
+			LRU_Control->tail = curNode->prev;
 			assert(tail!=NULL);
-			tail->next = NULL;
+			LRU_Control->tail->next = NULL;
 		} else {
 			assert(curNode->prev!=NULL);
 			assert(curNode->next!=NULL);
@@ -317,7 +317,7 @@ void DeleteLRU_Stack(int buf_id){
 	curNode->next = NULL;
 	curNode->prev = NULL;
 	free(curNode);
-	size--;
+	LRU_Control->size--;
 }
 
 /*
