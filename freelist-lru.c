@@ -50,7 +50,22 @@ typedef struct
 
 /* Pointers to shared state */
 static BufferStrategyControl *StrategyControl = NULL;
+struct StackNode{
+	int buf_id;
+	struct StackNode *next;
+	struct StackNode *prev;
+};
 
+typedef struct StackNode StackNode;
+
+typedef struct LRU_Stack{
+	StackNode *head;
+	StackNode *tail;
+	int size;
+} LRU_Stack;
+
+/* LRU_Stack for the buffer pool */
+static LRU_Stack* LRU_Control = NULL;
 /*
  * Private (non-shared) state for managing a ring of shared buffers to re-use.
  * This is currently the only kind of BufferAccessStrategy object, but someday
@@ -84,22 +99,6 @@ typedef struct BufferAccessStrategyData
 	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
 }	BufferAccessStrategyData;
 
-struct StackNode{
-	int buf_id;
-	struct StackNode *next;
-	struct StackNode *prev;
-};
-
-typedef struct StackNode StackNode;
-
-typedef struct LRU_Stack{
-	StackNode *head;
-	StackNode *tail;
-	int size;
-} LRU_Stack;
-
-/* LRU_Stack for the buffer pool */
-static LRU_Stack* LRU_Control = NULL;
 /* Prototypes for internal functions */
 static volatile BufferDesc *GetBufferFromRing(BufferAccessStrategy strategy);
 static void AddBufferToRing(BufferAccessStrategy strategy,
@@ -183,7 +182,9 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
-
+	elog(LOG, "Strategy first free buffer is %d ", StrategyControl->firstFreeBuffer);
+	if (StrategyControl->firstFreeBuffer == -1)
+		elog(LOG, "Stack size is %d ", LRU_Control->size);
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
 	 * assume strategy objects don't need the BufFreelistLock.
@@ -260,44 +261,49 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	Assert(LRU_Control!= NULL);
 	StackNode* curNode = LRU_Control->tail;
-	for (;;)
-	{
-		if (curNode == NULL)
+	///elog(LOG, "Stack size is %d ", LRU_Control->size);
+	if (LRU_Control->size>0){
+		for (;;)
 		{
+			if (curNode == NULL)
+			{
+				elog(ERROR, "Stack size is %d ", LRU_Control->size);
+				/*
+				* We've scanned all the buffers without making any state changes,
+				* so all the buffers are pinned (or were when we looked at them).
+				* We could hope that someone will free one eventually, but it's
+				* probably better to fail than to risk getting stuck in an
+				* infinite loop.
+				*/
+				elog(ERROR, "cur node is NULL");
+			}
+			buf = &BufferDescriptors[curNode->buf_id];
 			/*
-			* We've scanned all the buffers without making any state changes,
-			* so all the buffers are pinned (or were when we looked at them).
-			* We could hope that someone will free one eventually, but it's
-			* probably better to fail than to risk getting stuck in an
-			* infinite loop.
+			* If the buffer is pinned , we cannot use
+			* move to the next least recently used buffer
 			*/
+			LockBufHdr(buf);
+			if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
+			{
+				if (strategy != NULL)
+					AddBufferToRing(strategy, buf);
+				StrategyControl->nextVictimBuffer = buf->buf_id;
+				StrategyUpdateAccessedBuffer(buf->buf_id);
+				return buf;
+			}
+			curNode=curNode->prev;
 			UnlockBufHdr(buf);
-			elog(ERROR, "no unpinned buffers available");
 		}
-		buf = &BufferDescriptors[curNode->buf_id];
-		/*
-		 * If the buffer is pinned , we cannot use
-		 * move to the next least recently used buffer
-		 */
-		LockBufHdr(buf);
-		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
-		{
-			if (strategy != NULL)
-				AddBufferToRing(strategy, buf);
-			StrategyControl->nextVictimBuffer = buf->buf_id;
-			StrategyUpdateAccessedBuffer(buf->buf_id);
-			return buf;
-		}
-		curNode=curNode->prev;
-		UnlockBufHdr(buf);
+	}else{
+		elog(ERROR, "Stack size is %d ", LRU_Control->size);
 	}
 }
 
 void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
+	elog(LOG, "Delete and Stack size is %d ", LRU_Control->size);
 	StackNode* curNode = LRU_Control->head;
 	while (curNode != NULL && curNode->buf_id != buf_id) 
 		curNode = curNode->next;
@@ -490,10 +496,13 @@ StrategyInitialize(bool init)
 			LRU_Control->size = 0;
 			LRU_Control->head = NULL;
 			LRU_Control->tail = NULL;
+		}else{
+			elog(ERROR, "Stack size in initialize is %d ", LRU_Control->size);
 		}
 	}
 	else
 		Assert(!init);
+	elog(LOG, "Strategy Initialize first free buffer is %d ", StrategyControl->firstFreeBuffer);
 
 }
 
