@@ -497,7 +497,7 @@ StrategyInitialize(bool init)
 			LRU_Control->head = NULL;
 			LRU_Control->tail = NULL;
 		}else{
-			elog(ERROR, "Stack size in initialize is %d ", LRU_Control->size);
+			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
 		}
 	}
 	else
