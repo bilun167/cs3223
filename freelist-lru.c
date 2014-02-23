@@ -109,14 +109,14 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
 // buf_id = identifier of accessed buffer page
-void 
+volatile void 
 StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
 	// if LRU_Stack is empty -> insert the head
 	if (LRU_Control->size==0){
 		// Create new node
-		curNode = malloc(sizeof(StackNode));
+		curNode = (StackNode*)malloc(sizeof(StackNode));
 		Assert(curNode!= NULL);
 		curNode->buf_id = buf_id;
 		curNode->next = 0;
@@ -134,7 +134,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		
 		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
 			// Create new node and insert to the top of the Stack
-			curNode = malloc(sizeof(StackNode));
+			curNode = (StackNode*)malloc(sizeof(StackNode));
 			Assert(curNode!= NULL);
 			curNode->buf_id = buf_id;
 			curNode->next = LRU_Control->head;
@@ -291,7 +291,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	}
 }
 
-void DeleteLRU_Stack(int buf_id){
+volatile void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
 	StackNode* curNode = LRU_Control->head;
@@ -320,6 +320,7 @@ void DeleteLRU_Stack(int buf_id){
 	curNode->next = NULL;
 	curNode->prev = NULL;
 	free(curNode);
+	curNode = NULL;
 	LRU_Control->size--;
 }
 
@@ -418,7 +419,8 @@ StrategyShmemSize(void)
 	size = add_size(size, MAXALIGN(sizeof(BufferStrategyControl)));
 
 	/* size of the LRU stack */
-	size = add_size(size, sizeof(LRU_Stack));
+	size = add_size(size, MAXALIGN(sizeof(LRU_Stack)));
+	size = add_size(size, mul_size(NBuffers,sizeof(StackNode)));
 
 	return size;
 }
@@ -434,7 +436,7 @@ void
 StrategyInitialize(bool init)
 {
 	bool		found;
-
+	bool		stack_found;
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
@@ -478,15 +480,18 @@ StrategyInitialize(bool init)
 
 		/* No pending notification */
 		StrategyControl->bgwriterLatch = NULL;
+
+		// CS3223: initialize the LRU stack
+		if (LRU_Control == NULL){
+			LRU_Control = (LRU_Stack*)malloc(sizeof(LRU_Stack));
+			LRU_Control->size = 0;
+			LRU_Control->head = NULL;
+			LRU_Control->tail = NULL;
+		}
 	}
 	else
 		Assert(!init);
 
-	// CS3223: initialize the LRU stack
-	LRU_Control = malloc(sizeof(LRU_Stack));
-	LRU_Control->size = 0;
-	LRU_Control->head = NULL;
-	LRU_Control->tail = NULL;
 }
 
 
