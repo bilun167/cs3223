@@ -109,7 +109,7 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
 // buf_id = identifier of accessed buffer page
-volatile void 
+void 
 StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
@@ -183,7 +183,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
-
+	int			trycounter;
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
 	 * assume strategy objects don't need the BufFreelistLock.
@@ -194,6 +194,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		if (buf != NULL)
 		{
 			*lock_held = false;
+			StrategyUpdateAccessedBuffer(buf->buf_id);
 			return buf;
 		}
 	}
@@ -260,39 +261,57 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
 	Assert(LRU_Control!= NULL);
-	StackNode* curNode = LRU_Control->tail;
+	/* Nothing on the freelist, so run the "clock sweep" algorithm */
+	trycounter = NBuffers;
 	for (;;)
 	{
-		if (curNode == NULL)
+		buf = &BufferDescriptors[StrategyControl->nextVictimBuffer];
+
+		if (++StrategyControl->nextVictimBuffer >= NBuffers)
+		{
+			StrategyControl->nextVictimBuffer = 0;
+			StrategyControl->completePasses++;
+		}
+
+		/*
+		 * If the buffer is pinned or has a nonzero usage_count, we cannot use
+		 * it; decrement the usage_count (unless pinned) and keep scanning.
+		 */
+		LockBufHdr(buf);
+		if (buf->refcount == 0)
+		{
+			if (buf->usage_count > 0)
+			{
+				buf->usage_count--;
+				trycounter = NBuffers;
+			}
+			else
+			{
+				/* Found a usable buffer */
+				if (strategy != NULL)
+					AddBufferToRing(strategy, buf);
+				StrategyUpdateAccessedBuffer(buf->buf_id);
+				return buf;
+			}
+		}
+		else if (--trycounter == 0)
 		{
 			/*
-			* We've scanned all the buffers without making any state changes,
-			* so all the buffers are pinned (or were when we looked at them).
-			* We could hope that someone will free one eventually, but it's
-			* probably better to fail than to risk getting stuck in an
-			* infinite loop.
-			*/
+			 * We've scanned all the buffers without making any state changes,
+			 * so all the buffers are pinned (or were when we looked at them).
+			 * We could hope that someone will free one eventually, but it's
+			 * probably better to fail than to risk getting stuck in an
+			 * infinite loop.
+			 */
 			UnlockBufHdr(buf);
 			elog(ERROR, "no unpinned buffers available");
 		}
-		buf = &BufferDescriptors[curNode->buf_id];
-		/*
-		 * If the buffer is pinned , we cannot use
-		 * move to the next least recently used buffer
-		 */
-		LockBufHdr(buf);
-		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
-		{
-			StrategyUpdateAccessedBuffer(curNode->buf_id);
-			return buf;
-		}
-		curNode=curNode->prev;
 		UnlockBufHdr(buf);
 	}
 }
 
-volatile void DeleteLRU_Stack(int buf_id){
-	/* CS3223, delete the Node from LRU Stack*/
+/* CS3223, delete the Node from LRU Stack*/
+void DeleteLRU_Stack(int buf_id){
 	// First we find the position of the node with the corresponding buf_id
 	StackNode* curNode = LRU_Control->head;
 	while (curNode != NULL && curNode->buf_id != buf_id) 
@@ -436,7 +455,7 @@ void
 StrategyInitialize(bool init)
 {
 	bool		found;
-	bool		stack_found;
+
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
