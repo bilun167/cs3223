@@ -109,7 +109,7 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
 // buf_id = identifier of accessed buffer page
-volatile void 
+void 
 StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
@@ -194,6 +194,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		if (buf != NULL)
 		{
 			*lock_held = false;
+			StrategyUpdateAccessedBuffer(buf->buf_id);
 			return buf;
 		}
 	}
@@ -283,7 +284,10 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		LockBufHdr(buf);
 		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
 		{
-			StrategyUpdateAccessedBuffer(curNode->buf_id);
+			if (strategy != NULL)
+				AddBufferToRing(strategy, buf);
+			StrategyControl->nextVictimBuffer = buf->buf_id;
+			StrategyUpdateAccessedBuffer(buf->buf_id);
 			return buf;
 		}
 		curNode=curNode->prev;
@@ -291,7 +295,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	}
 }
 
-volatile void DeleteLRU_Stack(int buf_id){
+void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
 	StackNode* curNode = LRU_Control->head;
@@ -436,7 +440,6 @@ void
 StrategyInitialize(bool init)
 {
 	bool		found;
-	bool		stack_found;
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
