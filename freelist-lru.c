@@ -123,37 +123,37 @@ StrategyUpdateAccessedBuffer(int buf_id)
 	elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
 	if (!StrategyControl->size){
 		// Create new node
-		StrategyControl->LRUStack[buf_id]->buf_id = buf_id;
-		StrategyControl->LRUStack[buf_id]->buf_id->next = NOT_IN_STACK;
-		StrategyControl->LRUStack[buf_id]->buf_id->prev = NOT_IN_STACK;
+		StrategyControl->LRUStack[buf_id].buf_id = buf_id;
+		StrategyControl->LRUStack[buf_id].next = NOT_IN_STACK;
+		StrategyControl->LRUStack[buf_id].prev = NOT_IN_STACK;
 		StrategyControl->tail = buf_id;
 		StrategyControl->head = buf_id;
 		StrategyControl->size++;
 	} else{
 		// Find the Node in the Stack
-		curNode = StrategyControl->LRUStack[StrategyControl->head];
+		curNode = &StrategyControl->LRUStack[StrategyControl->head];
 		while (1){
 			if (curNode->buf_id == buf_id || curNode->next == NOT_IN_STACK) // The the node in stack or end of line
 				break;
-			curNode = LRUStack[curNode->next];
+			curNode = &StrategyControl->LRUStack[curNode->next];
 		}
 		if (curNode->buf_id == buf_id ){// Find the node in the stack
-			if (buf_id == tail){
+			if (buf_id == StrategyControl->tail){
 				StrategyControl->tail = curNode->prev;
-				StrategyControl->LRUStack[curNode->prev]->next = NOT_IN_STACK;
-			}else if (buf_id == head ){ // do nothing if already head
+				StrategyControl->LRUStack[curNode->prev].next = NOT_IN_STACK;
+			}else if (buf_id == StrategyControl->head ){ // do nothing if already head
 			}else{ // update new head
-				StrategyControl->LRUStack[curNode->prev]->next = curNode->next;
-				StrategyControl->LRUStack[curNode->next]->prev = curNode->prev;	
+				StrategyControl->LRUStack[curNode->prev].next = curNode->next;
+				StrategyControl->LRUStack[curNode->next].prev = curNode->prev;	
 			}
-			curNode->next = head;
+			curNode->next = StrategyControl->head;
 			curNode->prev = NOT_IN_STACK;
 			StrategyControl->head = buf_id;
 		}else{ // Not found, insert the new node to head
-			StrategyControl->LRUStack[buf_id]->buf_id = buf_id;
-			StrategyControl->LRUStack[buf_id]->next = head;
-			StrategyControl->LRUStack[buf_id]->prev = NOT_IN_STACK;
-			StrategyControl->LRUStack[head]->prev = buf_id;		// old head point to new head
+			StrategyControl->LRUStack[buf_id].buf_id = buf_id;
+			StrategyControl->LRUStack[buf_id].next = StrategyControl->head;
+			StrategyControl->LRUStack[buf_id].prev = NOT_IN_STACK;
+			StrategyControl->LRUStack[StrategyControl->head].prev = buf_id;		// old head point to new head
 			StrategyControl->head = buf_id;
 			StrategyControl->size++;
 		}
@@ -261,12 +261,12 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	StackNode* curNode = StrategyControl->LRUStack[StrategyControl->tail];
+	StackNode* curNode = &StrategyControl->LRUStack[StrategyControl->tail];
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
 	if (StrategyControl->size>0){
 		for (;;)
 		{
-			if (curNode == NOT_IN_STACK)
+			if (curNode->buf_id == NOT_IN_STACK)
 			{
 				elog(ERROR, "Stack size is %d ", StrategyControl->size);
 				/*
@@ -291,7 +291,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				StrategyUpdateAccessedBuffer(buf->buf_id);
 				return buf;
 			}
-			curNode=StrategyControl->LRUStack[curNode->prev];
+			curNode=&StrategyControl->LRUStack[curNode->prev];
 			UnlockBufHdr(buf);
 		}
 	}else{
@@ -303,25 +303,25 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 void DeleteLRU_Stack(int buf_id){
 	// First we find the position of the node with the corresponding buf_id
 	//elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
-	StackNode* curNode = StrategyControl->LRUStack[buf_id];
+	StackNode* curNode = &StrategyControl->LRUStack[buf_id];
 	if (StrategyControl->size==1){
 		StrategyControl->head = NOT_IN_STACK;
 		StrategyControl->tail = NOT_IN_STACK;
 	} else {
 		if (curNode->buf_id == StrategyControl->head){
 			StrategyControl->head = curNode->next;
-			StrategyControl->LRUStack[StrategyControl->head]->prev = NOT_IN_STACK;
-		} else if (curNode == StrategyControl->tail){
+			StrategyControl->LRUStack[StrategyControl->head].prev = NOT_IN_STACK;
+		} else if (curNode->buf_id == StrategyControl->tail){
 			StrategyControl->tail = curNode->prev;
-			StrategyControl->LRUStack[StrategyControl->tail]->next = NOT_IN_STACK;
+			StrategyControl->LRUStack[StrategyControl->tail].next = NOT_IN_STACK;
 		} else {
-			StrategyControl->LRUStack[curNode->prev]->next = curNode->next;
-			StrategyControl->LRUStack[curNode->next]->prev = curNode->prev;	
+			StrategyControl->LRUStack[curNode->prev].next = curNode->next;
+			StrategyControl->LRUStack[curNode->next].prev = curNode->prev;	
 		}
 	}
 	curNode->next = NOT_IN_STACK;
 	curNode->prev = NOT_IN_STACK;
-	StrategyControl->LRUStack[buf_id] =NOT_IN_STACK;
+	curNode->buf_id=NOT_IN_STACK;
 	StrategyControl->size--;
 }
 
@@ -492,7 +492,7 @@ StrategyInitialize(bool init)
 		}*/
 		StrategyControl->size = 0;
 		StrategyControl->LRUStack = (StackNode *) malloc(NBuffers*sizeof(StackNode)) ;
-		StackNode *iter = LRUStack;
+		StackNode *iter = StrategyControl->LRUStack;
 		for (i=0;i<NBuffers;i++){
 			iter->buf_id = NOT_IN_STACK;
 			iter->next = NOT_IN_STACK;
