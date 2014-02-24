@@ -596,7 +596,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 		// Update the LRU stack for the found buffer
 		// For simplicity, we use the bufFreelistLock for this update operation
 		LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-		StrategyUpdateAccessedBuffer(buf_id);
+		StrategyAdjustStack(buf_id, false);
 		LWLockRelease(BufFreelistLock);
 
 		return buf;
