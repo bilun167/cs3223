@@ -18,10 +18,11 @@
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
 
+#define NOT_IN_STACK -1
 struct StackNode{
 	int buf_id;
-	struct StackNode *next;
-	struct StackNode *prev;
+	int next;
+	int prev;
 };
 
 typedef struct StackNode StackNode;
@@ -53,8 +54,10 @@ typedef struct
 	 */
 	Latch	   *bgwriterLatch;
 
-	StackNode *head;
-	StackNode *tail;
+	// Variable size 
+	StackNode *LRUStack;
+	int tail;
+	int head;
 	int size;
 } BufferStrategyControl;
 
@@ -120,53 +123,39 @@ StrategyUpdateAccessedBuffer(int buf_id)
 	elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
 	if (!StrategyControl->size){
 		// Create new node
-		elog(LOG,"Inside StUpAccBu, if size = 0 ");
-		curNode = (StackNode*)malloc(sizeof(StackNode));
-		Assert(curNode!= NULL);
-		curNode->buf_id = buf_id;
-		curNode->next = NULL;
-		curNode->prev = NULL;
-		// Insert node to head
-		StrategyControl->head = curNode;
-		StrategyControl->tail = curNode;
+		StrategyControl->LRUStack[buf_id]->buf_id = buf_id;
+		StrategyControl->LRUStack[buf_id]->buf_id->next = NOT_IN_STACK;
+		StrategyControl->LRUStack[buf_id]->buf_id->prev = NOT_IN_STACK;
+		StrategyControl->tail = buf_id;
+		StrategyControl->head = buf_id;
 		StrategyControl->size++;
-		elog(LOG,"Inside StUpAccBu, if size = 0: new node head: %p, node head id: %d , node head->next %p",StrategyControl->head,StrategyControl->head->buf_id,StrategyControl->head->next);
 	} else{
 		// Find the Node in the Stack
-		elog(LOG,"Inside StUpAccBu, if size ! = 0 ");
-		elog(LOG,"Inside StUpAccBu, if size ! = 0, node head: %p node head id: %d ",StrategyControl->head,StrategyControl->head->buf_id);
-		curNode = StrategyControl->head;
-		elog(LOG,"Inside StUpAccBu, if size ! = 0, cur node: %p , cur_node id: %d, cur_node->next %p",curNode, curNode->buf_id,curNode->next);
-		while (curNode!= NULL && curNode->buf_id != buf_id) {
-			elog(LOG,"Finding buf_id: %p", curNode->next);
-			curNode = curNode->next;
+		curNode = StrategyControl->LRUStack[StrategyControl->head];
+		while (1){
+			if (curNode->buf_id == buf_id || curNode->next == NOT_IN_STACK) // The the node in stack or end of line
+				break;
+			curNode = LRUStack[curNode->next];
 		}
-		elog(LOG,"Inside StUpAccBu, Done find cur node if size ! = 0 ");
-		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
-			// Create new node and insert to the top of the Stack
-			elog(LOG,"Inside StUpAccBu, if no find ");
-			curNode = (StackNode*)malloc(sizeof(StackNode));
-			Assert(curNode!= NULL);
-			curNode->buf_id = buf_id;
-			curNode->next = StrategyControl->head;
-			curNode->prev = NULL;
-			StrategyControl->head->prev = curNode;
-			StrategyControl->head = curNode;
-			StrategyControl->size++;
-		} else if (curNode == StrategyControl->head){ 
-			// If it is head -> no need to do anything
-		}
-		else {
-			curNode->prev->next = curNode->next;
-			if (curNode == StrategyControl->tail){// If it is the tail->update new tail
+		if (curNode->buf_id == buf_id ){// Find the node in the stack
+			if (buf_id == tail){
 				StrategyControl->tail = curNode->prev;
-			} else {
-				curNode->next->prev = curNode->prev;
+				StrategyControl->LRUStack[curNode->prev]->next = NOT_IN_STACK;
+			}else if (buf_id == head ){ // do nothing if already head
+			}else{ // update new head
+				StrategyControl->LRUStack[curNode->prev]->next = curNode->next;
+				StrategyControl->LRUStack[curNode->next]->prev = curNode->prev;	
 			}
-			curNode->prev = NULL;
-			curNode->next = StrategyControl->head;
-			StrategyControl->head->prev = curNode;
-			StrategyControl->head = curNode;
+			curNode->next = head;
+			curNode->prev = NOT_IN_STACK;
+			StrategyControl->head = buf_id;
+		}else{ // Not found, insert the new node to head
+			StrategyControl->LRUStack[buf_id]->buf_id = buf_id;
+			StrategyControl->LRUStack[buf_id]->next = head;
+			StrategyControl->LRUStack[buf_id]->prev = NOT_IN_STACK;
+			StrategyControl->LRUStack[head]->prev = buf_id;		// old head point to new head
+			StrategyControl->head = buf_id;
+			StrategyControl->size++;
 		}
 	}
 }
@@ -272,12 +261,12 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	StackNode* curNode = StrategyControl->tail;
+	StackNode* curNode = StrategyControl->LRUStack[StrategyControl->tail];
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
 	if (StrategyControl->size>0){
 		for (;;)
 		{
-			if (curNode == NULL)
+			if (curNode == NOT_IN_STACK)
 			{
 				elog(ERROR, "Stack size is %d ", StrategyControl->size);
 				/*
@@ -299,11 +288,10 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 			{
 				if (strategy != NULL)
 					AddBufferToRing(strategy, buf);
-				StrategyControl->nextVictimBuffer = buf->buf_id;
 				StrategyUpdateAccessedBuffer(buf->buf_id);
 				return buf;
 			}
-			curNode=curNode->prev;
+			curNode=StrategyControl->LRUStack[curNode->prev];
 			UnlockBufHdr(buf);
 		}
 	}else{
@@ -311,37 +299,29 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	}
 }
 
+/* CS3223, delete the Node from LRU Stack*/
 void DeleteLRU_Stack(int buf_id){
-	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
-	elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
-	StackNode* curNode = StrategyControl->head;
-	while (curNode != NULL && curNode->buf_id != buf_id) 
-		curNode = curNode->next;
-	Assert(curNode != NULL);
+	//elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
+	StackNode* curNode = StrategyControl->LRUStack[StrategyControl->head];
 	if (StrategyControl->size==1){
-		StrategyControl->head = NULL;
-		StrategyControl->tail = NULL;
+		StrategyControl->head = NOT_IN_STACK;
+		StrategyControl->tail = NOT_IN_STACK;
 	} else {
-		if (curNode == StrategyControl->head){
+		if (curNode->buf_id == StrategyControl->head){
 			StrategyControl->head = curNode->next;
-			Assert(StrategyControl->head!=NULL);
-			StrategyControl->head->prev = NULL;
+			StrategyControl->LRUStack[StrategyControl->head]->prev = NOT_IN_STACK;
 		} else if (curNode == StrategyControl->tail){
 			StrategyControl->tail = curNode->prev;
-			Assert(StrategyControl->tail!=NULL);
-			StrategyControl->tail->next = NULL;
+			StrategyControl->LRUStack[StrategyControl->tail]->next = NOT_IN_STACK;
 		} else {
-			Assert(curNode->prev!=NULL);
-			Assert(curNode->next!=NULL);
-			curNode->prev->next = curNode->next;
-			curNode->next->prev = curNode->prev;
+			StrategyControl->LRUStack[buf_id]->next = head;
+			StrategyControl->LRUStack[buf_id]->prev = NOT_IN_STACK;
 		}
 	}
-	curNode->next = NULL;
-	curNode->prev = NULL;
-	free(curNode);
-	curNode = NULL;
+	curNode->next = NOT_IN_STACK;
+	curNode->prev = NOT_IN_STACK;
+	StrategyControl->LRUStack[buf_id] =NOT_IN_STACK;
 	StrategyControl->size--;
 }
 
@@ -456,6 +436,7 @@ void
 StrategyInitialize(bool init)
 {
 	bool		found;
+	int i = 0;
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
@@ -510,8 +491,15 @@ StrategyInitialize(bool init)
 			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
 		}*/
 		StrategyControl->size = 0;
-		StrategyControl->head = NULL;
-		StrategyControl->tail = NULL;
+		StrategyControl->LRUStack = (StackNode *) malloc(NBuffers*sizeof(StackNode)) ;
+		StackNode *iter = LRUStack;
+		for (i=0;i<NBuffers;i++){
+			iter->buf_id = NOT_IN_STACK;
+			iter->next = NOT_IN_STACK;
+			iter->prev = NOT_IN_STACK;
+		}
+		StrategyControl->tail = NOT_IN_STACK;
+		StrategyControl->head = NOT_IN_STACK;
 	}
 	else
 		Assert(!init);
