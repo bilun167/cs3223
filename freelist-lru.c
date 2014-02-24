@@ -120,7 +120,7 @@ void printStack(){
 		printf("%d -> ",curNode->buf_id);
 		curNode = &StrategyControl->LRUStack[curNode->next];
 	}
-	printf("\n");
+	printf("\n\n");
 }
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
@@ -129,6 +129,7 @@ void
 StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
+	printf("Inserting : %d [ ",buf_id);
 	// if LRU_Stack is empty -> insert the head
 	//elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
 	//printf("Inside StUpAccBu, size = %d head =%d tail= %d , buf_id = %d \n", StrategyControl->size,StrategyControl->head,StrategyControl->tail,buf_id);
@@ -139,7 +140,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		StrategyControl->tail = 0;
 		StrategyControl->head = 0;
 		StrategyControl->size++;
-		if (StrategyControl->size <NBuffers)
+		if (StrategyControl->size <=NBuffers)
 			StrategyControl->freePos = StrategyControl->size;
 		else
 			StrategyControl->freePos = NOT_IN_STACK;
@@ -160,7 +161,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 					curNode->next = StrategyControl->head; // next position of the new head is the old head
 					curNode->prev = NOT_IN_STACK;				
 				}else{ // middle of the two node
-					printf("middle curNode id = %d , curNode  next = %d ,curNode prev = %d\n",curNode->buf_id,curNode->next, curNode->prev);
+					//printf("middle curNode id = %d , curNode  next = %d ,curNode prev = %d\n",curNode->buf_id,curNode->next, curNode->prev);
 					StrategyControl->LRUStack[curNode->prev].next = curNode->next;		// next of prev is next of cur
 					StrategyControl->LRUStack[curNode->next].prev = curNode->prev;		// prev of next is prev of cur
 					curNode->next = StrategyControl->head; // next position of the new head is the old head
@@ -170,7 +171,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 					StrategyControl->head = i;		// update the head position
 			}
 		}else{ // Not found, insert to the next free slot:
-			printf("new node, free slot = %d \n", StrategyControl->freePos);
+			//printf("new node, free slot = %d \n", StrategyControl->freePos);
 			curNode = &StrategyControl->LRUStack[StrategyControl->freePos];
 			curNode->prev = NOT_IN_STACK;
 			curNode->next = StrategyControl->head; // next position of the new head is the old head
@@ -178,12 +179,13 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			curNode->buf_id = buf_id;
 			StrategyControl->head = i;		// update the head position
 			StrategyControl->size++;
-			if (StrategyControl->size <NBuffers)
+			if (StrategyControl->size <=NBuffers)
 				StrategyControl->freePos = StrategyControl->size;
 			else
 				StrategyControl->freePos = NOT_IN_STACK;
 		}
 	}
+	printStack();
 }
 
 
@@ -289,6 +291,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
 	StackNode* curNode = &StrategyControl->LRUStack[StrategyControl->tail];
+	printf("Tail:%d \n",StrategyControl->tail);
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
 	if (StrategyControl->size>0){
 		for (;;)
@@ -304,7 +307,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				* probably better to fail than to risk getting stuck in an
 				* infinite loop.
 				*/
-				elog(ERROR, "cur node is NULL");
+				//elog(ERROR, "cur node is NULL");
 			}
 			buf = &BufferDescriptors[curNode->buf_id];
 			/*
@@ -319,8 +322,8 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				StrategyUpdateAccessedBuffer(buf->buf_id);
 				return buf;
 			}
-			curNode=&StrategyControl->LRUStack[curNode->prev];
 			UnlockBufHdr(buf);
+			curNode=&StrategyControl->LRUStack[curNode->prev];
 		}
 	}else{
 		elog(ERROR, "Stack size is %d ", StrategyControl->size);
@@ -473,8 +476,6 @@ StrategyInitialize(bool init)
 {
 	bool		found;
 	int i = 0;
-	printf("Initialize");
-	printf("\n");
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
@@ -492,7 +493,7 @@ StrategyInitialize(bool init)
 	 */
 	StrategyControl = (BufferStrategyControl *)
 		ShmemInitStruct("Buffer Strategy Status",
-						sizeof(BufferStrategyControl),
+						sizeof(BufferStrategyControl) + NBuffers*sizeof(StackNode),
 						&found);
 
 	if (!found)
@@ -529,7 +530,7 @@ StrategyInitialize(bool init)
 			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
 		}*/
 		StrategyControl->size = 0;
-		StrategyControl->LRUStack = (StackNode *) malloc(NBuffers*sizeof(StackNode)) ;
+		StrategyControl->LRUStack = (StackNode *) palloc(NBuffers*sizeof(StackNode)) ;
 		StackNode *iter = StrategyControl->LRUStack;
 		for (i=0;i<NBuffers;i++){
 			iter->buf_id = NOT_IN_STACK;
