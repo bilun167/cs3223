@@ -113,7 +113,7 @@ static void AtProcExit_Buffers(int code, Datum arg);
 static int	rnode_comparator(const void *p1, const void *p2);
 
 // cs3223
-extern void StrategyUpdateAccessedBuffer(int buf_id);
+extern void StrategyAdjustStack(int buf_id);
 
 /*
  * PrefetchBuffer -- initiate asynchronous read of a block of a relation
