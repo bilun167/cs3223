@@ -18,7 +18,13 @@
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
 
+struct StackNode{
+	int buf_id;
+	struct StackNode *next;
+	struct StackNode *prev;
+};
 
+typedef struct StackNode StackNode;
 /*
  * The shared freelist control information.
  */
@@ -46,26 +52,24 @@ typedef struct
 	 * Notification latch, or NULL if none.  See StrategyNotifyBgWriter.
 	 */
 	Latch	   *bgwriterLatch;
+
+	StackNode *head;
+	StackNode *tail;
+	int size;
 } BufferStrategyControl;
 
 /* Pointers to shared state */
 static BufferStrategyControl *StrategyControl = NULL;
-struct StackNode{
-	int buf_id;
-	struct StackNode *next;
-	struct StackNode *prev;
-};
 
-typedef struct StackNode StackNode;
 
-typedef struct LRU_Stack{
+/*typedef struct LRU_Stack{
 	StackNode *head;
 	StackNode *tail;
 	int size;
-} LRU_Stack;
+} LRU_Stack;*/
 
 /* LRU_Stack for the buffer pool */
-static LRU_Stack* LRU_Control = NULL;
+//static LRU_Stack* LRU_Control = NULL;
 /*
  * Private (non-shared) state for managing a ring of shared buffers to re-use.
  * This is currently the only kind of BufferAccessStrategy object, but someday
@@ -113,48 +117,56 @@ StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
 	// if LRU_Stack is empty -> insert the head
-	if (LRU_Control->size==0){
+	elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
+	if (!StrategyControl->size){
 		// Create new node
+		elog(LOG,"Inside StUpAccBu, if size = 0 ");
 		curNode = (StackNode*)malloc(sizeof(StackNode));
 		Assert(curNode!= NULL);
 		curNode->buf_id = buf_id;
-		curNode->next = 0;
-		curNode->prev = 0;
+		curNode->next = NULL;
+		curNode->prev = NULL;
 		// Insert node to head
-		Assert(LRU_Control != NULL);
-		LRU_Control->head = curNode;
-		LRU_Control->tail = curNode;
-		LRU_Control->size++;
+		StrategyControl->head = curNode;
+		StrategyControl->tail = curNode;
+		StrategyControl->size++;
+		elog(LOG,"Inside StUpAccBu, if size = 0: new node head: %p, node head id: %d , node head->next %p",StrategyControl->head,StrategyControl->head->buf_id,StrategyControl->head->next);
 	} else{
 		// Find the Node in the Stack
-		curNode = LRU_Control->head;
-		while (curNode!= NULL && curNode->buf_id != buf_id) 
+		elog(LOG,"Inside StUpAccBu, if size ! = 0 ");
+		elog(LOG,"Inside StUpAccBu, if size ! = 0, node head: %p node head id: %d ",StrategyControl->head,StrategyControl->head->buf_id);
+		curNode = StrategyControl->head;
+		elog(LOG,"Inside StUpAccBu, if size ! = 0, cur node: %p , cur_node id: %d, cur_node->next %p",curNode, curNode->buf_id,curNode->next);
+		while (curNode!= NULL && curNode->buf_id != buf_id) {
+			elog(LOG,"Finding buf_id: %p", curNode->next);
 			curNode = curNode->next;
-		
+		}
+		elog(LOG,"Inside StUpAccBu, Done find cur node if size ! = 0 ");
 		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
 			// Create new node and insert to the top of the Stack
+			elog(LOG,"Inside StUpAccBu, if no find ");
 			curNode = (StackNode*)malloc(sizeof(StackNode));
 			Assert(curNode!= NULL);
 			curNode->buf_id = buf_id;
-			curNode->next = LRU_Control->head;
+			curNode->next = StrategyControl->head;
 			curNode->prev = NULL;
-			LRU_Control->head->prev = curNode;
-			LRU_Control->head = curNode;
-			LRU_Control->size++;
-		} else if (curNode == LRU_Control->head){ 
+			StrategyControl->head->prev = curNode;
+			StrategyControl->head = curNode;
+			StrategyControl->size++;
+		} else if (curNode == StrategyControl->head){ 
 			// If it is head -> no need to do anything
 		}
 		else {
 			curNode->prev->next = curNode->next;
-			if (curNode == LRU_Control->tail){// If it is the tail->update new tail
-				LRU_Control->tail = curNode->prev;
+			if (curNode == StrategyControl->tail){// If it is the tail->update new tail
+				StrategyControl->tail = curNode->prev;
 			} else {
 				curNode->next->prev = curNode->prev;
 			}
 			curNode->prev = NULL;
-			curNode->next = LRU_Control->head;
-			LRU_Control->head->prev = curNode;
-			LRU_Control->head = curNode;
+			curNode->next = StrategyControl->head;
+			StrategyControl->head->prev = curNode;
+			StrategyControl->head = curNode;
 		}
 	}
 }
@@ -182,9 +194,8 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
-	elog(LOG, "Strategy first free buffer is %d ", StrategyControl->firstFreeBuffer);
-	if (StrategyControl->firstFreeBuffer == -1)
-		elog(LOG, "Stack size is %d ", LRU_Control->size);
+	//elog(LOG, "Strategy first free buffer is %d ", StrategyControl->firstFreeBuffer);
+		elog(LOG, "Get buffer:Stack size is %d ", StrategyControl->size);
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
 	 * assume strategy objects don't need the BufFreelistLock.
@@ -261,14 +272,14 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 
 	/* Nothing on the freelist, so run the LRU algorithm */
 	// initialized cur node to the least recently used( the tail of the stack) 
-	StackNode* curNode = LRU_Control->tail;
+	StackNode* curNode = StrategyControl->tail;
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
-	if (LRU_Control->size>0){
+	if (StrategyControl->size>0){
 		for (;;)
 		{
 			if (curNode == NULL)
 			{
-				elog(ERROR, "Stack size is %d ", LRU_Control->size);
+				elog(ERROR, "Stack size is %d ", StrategyControl->size);
 				/*
 				* We've scanned all the buffers without making any state changes,
 				* so all the buffers are pinned (or were when we looked at them).
@@ -296,30 +307,30 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 			UnlockBufHdr(buf);
 		}
 	}else{
-		elog(ERROR, "Stack size is %d ", LRU_Control->size);
+		elog(ERROR, "Stack size is %d ", StrategyControl->size);
 	}
 }
 
 void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
-	elog(LOG, "Delete and Stack size is %d ", LRU_Control->size);
-	StackNode* curNode = LRU_Control->head;
+	elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
+	StackNode* curNode = StrategyControl->head;
 	while (curNode != NULL && curNode->buf_id != buf_id) 
 		curNode = curNode->next;
 	Assert(curNode != NULL);
-	if (LRU_Control->size==1){
-		LRU_Control->head = NULL;
-		LRU_Control->tail = NULL;
+	if (StrategyControl->size==1){
+		StrategyControl->head = NULL;
+		StrategyControl->tail = NULL;
 	} else {
-		if (curNode == LRU_Control->head){
-			LRU_Control->head = curNode->next;
-			Assert(LRU_Control->head!=NULL);
-			LRU_Control->head->prev = NULL;
-		} else if (curNode == LRU_Control->tail){
-			LRU_Control->tail = curNode->prev;
-			Assert(LRU_Control->tail!=NULL);
-			LRU_Control->tail->next = NULL;
+		if (curNode == StrategyControl->head){
+			StrategyControl->head = curNode->next;
+			Assert(StrategyControl->head!=NULL);
+			StrategyControl->head->prev = NULL;
+		} else if (curNode == StrategyControl->tail){
+			StrategyControl->tail = curNode->prev;
+			Assert(StrategyControl->tail!=NULL);
+			StrategyControl->tail->next = NULL;
 		} else {
 			Assert(curNode->prev!=NULL);
 			Assert(curNode->next!=NULL);
@@ -331,7 +342,7 @@ void DeleteLRU_Stack(int buf_id){
 	curNode->prev = NULL;
 	free(curNode);
 	curNode = NULL;
-	LRU_Control->size--;
+	StrategyControl->size--;
 }
 
 /*
@@ -429,7 +440,6 @@ StrategyShmemSize(void)
 	size = add_size(size, MAXALIGN(sizeof(BufferStrategyControl)));
 
 	/* size of the LRU stack */
-	size = add_size(size, MAXALIGN(sizeof(LRU_Stack)));
 	size = add_size(size, mul_size(NBuffers,sizeof(StackNode)));
 
 	return size;
@@ -491,14 +501,17 @@ StrategyInitialize(bool init)
 		StrategyControl->bgwriterLatch = NULL;
 
 		// CS3223: initialize the LRU stack
-		if (LRU_Control == NULL){
+		/*if (LRU_Control == NULL){
 			LRU_Control = (LRU_Stack*)malloc(sizeof(LRU_Stack));
 			LRU_Control->size = 0;
 			LRU_Control->head = NULL;
 			LRU_Control->tail = NULL;
 		}else{
 			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
-		}
+		}*/
+		StrategyControl->size = 0;
+		StrategyControl->head = NULL;
+		StrategyControl->tail = NULL;
 	}
 	else
 		Assert(!init);
