@@ -303,7 +303,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 void DeleteLRU_Stack(int buf_id){
 	// First we find the position of the node with the corresponding buf_id
 	//elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
-	StackNode* curNode = StrategyControl->LRUStack[StrategyControl->head];
+	StackNode* curNode = StrategyControl->LRUStack[buf_id];
 	if (StrategyControl->size==1){
 		StrategyControl->head = NOT_IN_STACK;
 		StrategyControl->tail = NOT_IN_STACK;
@@ -315,8 +315,8 @@ void DeleteLRU_Stack(int buf_id){
 			StrategyControl->tail = curNode->prev;
 			StrategyControl->LRUStack[StrategyControl->tail]->next = NOT_IN_STACK;
 		} else {
-			StrategyControl->LRUStack[buf_id]->next = head;
-			StrategyControl->LRUStack[buf_id]->prev = NOT_IN_STACK;
+			StrategyControl->LRUStack[curNode->prev]->next = curNode->next;
+			StrategyControl->LRUStack[curNode->next]->prev = curNode->prev;	
 		}
 	}
 	curNode->next = NOT_IN_STACK;
@@ -503,7 +503,7 @@ StrategyInitialize(bool init)
 	}
 	else
 		Assert(!init);
-	elog(LOG, "Strategy Initialize first free buffer is %d ", StrategyControl->firstFreeBuffer);
+	//elog(LOG, "Strategy Initialize first free buffer is %d ", StrategyControl->firstFreeBuffer);
 
 }
 
