@@ -85,7 +85,7 @@ typedef struct BufferAccessStrategyData
 }	BufferAccessStrategyData;
 
 struct StackNode{
-	int buf_id;
+	BufferDesc *buf;
 	struct StackNode *next;
 	struct StackNode *prev;
 };
@@ -118,7 +118,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		// Create new node
 		curNode = malloc(sizeof(StackNode));
 		Assert(curNode!= NULL);
-		curNode->buf_id = buf_id;
+		curNode->buf = &BufferDescriptors[buf_id];
 		curNode->next = 0;
 		curNode->prev = 0;
 		// Insert node to head
@@ -129,14 +129,14 @@ StrategyUpdateAccessedBuffer(int buf_id)
 	} else{
 		// Find the Node in the Stack
 		curNode = LRU_Control->head;
-		while (curNode!= NULL && curNode->buf_id != buf_id) 
+		while (curNode!= NULL && curNode->buf->buf_id != buf_id) 
 			curNode = curNode->next;
 		
 		if (curNode == NULL){// can't find the node w/ the buf_id in the Stack
 			// Create new node and insert to the top of the Stack
 			curNode = malloc(sizeof(StackNode));
 			Assert(curNode!= NULL);
-			curNode->buf_id = buf_id;
+			curNode->buf = &BufferDescriptors[buf_id];
 			curNode->next = LRU_Control->head;
 			curNode->prev = NULL;
 			LRU_Control->head->prev = curNode;
@@ -272,10 +272,9 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 			* probably better to fail than to risk getting stuck in an
 			* infinite loop.
 			*/
-			UnlockBufHdr(buf);
 			elog(ERROR, "no unpinned buffers available");
 		}
-		buf = &BufferDescriptors[curNode->buf_id];
+		buf = &BufferDescriptors[curNode->buf->buf_id];
 		/*
 		 * If the buffer is pinned , we cannot use
 		 * move to the next least recently used buffer
@@ -283,7 +282,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		LockBufHdr(buf);
 		if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
 		{
-			StrategyUpdateAccessedBuffer(curNode->buf_id);
+			StrategyUpdateAccessedBuffer(curNode->buf->buf_id);
 			return buf;
 		}
 		curNode=curNode->prev;
@@ -295,7 +294,7 @@ void DeleteLRU_Stack(int buf_id){
 	/* CS3223, delete the Node from LRU Stack*/
 	// First we find the position of the node with the corresponding buf_id
 	StackNode* curNode = LRU_Control->head;
-	while (curNode != NULL && curNode->buf_id != buf_id) 
+	while (curNode != NULL && curNode->buf->buf_id != buf_id) 
 		curNode = curNode->next;
 	Assert(curNode != NULL);
 	if (LRU_Control->size==1){
@@ -319,6 +318,7 @@ void DeleteLRU_Stack(int buf_id){
 	}
 	curNode->next = NULL;
 	curNode->prev = NULL;
+	curNode->buf = NULL;
 	free(curNode);
 	LRU_Control->size--;
 }
