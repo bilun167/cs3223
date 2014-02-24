@@ -131,9 +131,9 @@ StrategyUpdateAccessedBuffer(int buf_id)
 		StrategyControl->head = 0;
 		StrategyControl->size++;
 		if (StrategyControl->size <NBuffers)
-			freePos = StrategyControl->size;
+			StrategyControl->freePos = StrategyControl->size;
 		else
-			freePos = NOT_IN_STACK;
+			StrategyControl->freePos = NOT_IN_STACK;
 	} else{
 		// Find the Node in the Stack
 		curNode = &StrategyControl->LRUStack[StrategyControl->head];
@@ -143,35 +143,35 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			if (curNode->buf_id == buf_id)
 				break;
 		}
-		if (i < size){ // found the node with the buf_id
-			if (i != head) { // if the position is the head -> do nothing
+		if (i < StrategyControl->size){ // found the node with the buf_id
+			if (i != StrategyControl->head) { // if the position is the head -> do nothing
 				if (i==StrategyControl->tail){ // tail position-> new tail
-					StrategyControl->LRUStack[curNode.prev].next = NOT_IN_STACK; // position of the new tail next 
+					StrategyControl->LRUStack[curNode->prev].next = NOT_IN_STACK; // position of the new tail next 
 					StrategyControl->tail = StrategyControl->LRUStack[i].prev; // new tail position
-					curNode.next = StrategyControl->head // next position of the new head is the old head
-					curNode.prev = NOT_IN_STACK;
+					curNode->next = StrategyControl->head; // next position of the new head is the old head
+					curNode->prev = NOT_IN_STACK;
 					StrategyControl->head = i;		// update the head position
 				}else{ // middle of the two node
-					StrategyControl->LRUStack[curNode.prev].next = curNode.next;		// next of prev is next of cur
-					StrategyControl->LRUStack[curNode.next].prev = curNode.prev;		// prev of next is prev of cur
-					curNode.next = StrategyControl->head // next position of the new head is the old head
-					curNode.prev = NOT_IN_STACK;
+					StrategyControl->LRUStack[curNode->prev].next = curNode->next;		// next of prev is next of cur
+					StrategyControl->LRUStack[curNode->next].prev = curNode->prev;		// prev of next is prev of cur
+					curNode->next = StrategyControl->head; // next position of the new head is the old head
+					curNode->prev = NOT_IN_STACK;
 					StrategyControl->head = i;		// update the head position
 				}
 			}
 		}else{ // Not found, insert to the next free slot:
-			curNode = &StrategyControl->LRUStack[freePos];
-			curNode.prev = NOT_IN_STACK;
-			curNode.next = StrategyControl->head // next position of the new head is the old head
-			curNode.buf_id = buf_id;
+			curNode = &StrategyControl->LRUStack[StrategyControl->freePos];
+			curNode->prev = NOT_IN_STACK;
+			curNode->next = StrategyControl->head; // next position of the new head is the old head
+			curNode->buf_id = buf_id;
 			StrategyControl->head = i;		// update the head position
 			StrategyControl->size++;
 		}
 	}
 	// Print the stack trace from head to tail
 	curNode = &StrategyControl->LRUStack[StrategyControl->head];
-	if (curNode != NOT_IN_STACK){
-		printf("%d -> ",curNode.buf_id);
+	if (curNode->buf_id != NOT_IN_STACK){
+		printf("%d -> ",curNode->buf_id);
 		curNode = &StrategyControl->LRUStack[curNode->next];
 	}
 	printf("\n");
@@ -332,9 +332,9 @@ void DeleteLRU_Stack(int buf_id){
 	if (StrategyControl->size==1){
 		StrategyControl->head = NOT_IN_STACK;
 		StrategyControl->tail = NOT_IN_STACK;
-		freePos = 0;
+		StrategyControl->freePos = 0;
 	} else {
-		freePos = i;	// Position for free slot
+		StrategyControl->freePos = i;	// Position for free slot
 		if (curNode->buf_id == StrategyControl->head){
 			StrategyControl->head = curNode->next; // next head
 			StrategyControl->LRUStack[StrategyControl->head].prev = NOT_IN_STACK;
@@ -529,7 +529,7 @@ StrategyInitialize(bool init)
 		}
 		StrategyControl->tail = NOT_IN_STACK;
 		StrategyControl->head = NOT_IN_STACK;
-		freePos = 0;
+		StrategyControl->freePos = 0;
 	}
 	else
 		Assert(!init);
