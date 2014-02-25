@@ -66,14 +66,6 @@ static BufferStrategyControl *StrategyControl = NULL;
 // Variable size 
 static StackNode *LRUStack = NULL;
 
-/*typedef struct LRU_Stack{
-	StackNode *head;
-	StackNode *tail;
-	int size;
-} LRU_Stack;*/
-
-/* LRU_Stack for the buffer pool */
-//static LRU_Stack* LRU_Control = NULL;
 /*
  * Private (non-shared) state for managing a ring of shared buffers to re-use.
  * This is currently the only kind of BufferAccessStrategy object, but someday
@@ -521,14 +513,6 @@ StrategyInitialize(bool init)
 		StrategyControl->bgwriterLatch = NULL;
 
 		// CS3223: initialize the LRU stack
-		/*if (LRU_Control == NULL){
-			LRU_Control = (LRU_Stack*)malloc(sizeof(LRU_Stack));
-			LRU_Control->size = 0;
-			LRU_Control->head = NULL;
-			LRU_Control->tail = NULL;
-		}else{
-			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
-		}*/
 		StrategyControl->size = 0;
 		
 		StrategyControl->tail = NOT_IN_STACK;
