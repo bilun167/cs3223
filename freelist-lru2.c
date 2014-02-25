@@ -18,7 +18,15 @@
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
 
+#define NOT_IN_STACK -1
+struct StackNode{
+	int buf_id;
+	int next;
+	int prev;
+	int accessed_time;
+};
 
+typedef struct StackNode StackNode;
 /*
  * The shared freelist control information.
  */
@@ -46,10 +54,18 @@ typedef struct
 	 * Notification latch, or NULL if none.  See StrategyNotifyBgWriter.
 	 */
 	Latch	   *bgwriterLatch;
+
+	
+	int tail;
+	int head;
+	int size;
+	int freePos;
 } BufferStrategyControl;
 
 /* Pointers to shared state */
 static BufferStrategyControl *StrategyControl = NULL;
+// Variable size 
+static StackNode *LRUStack = NULL;
 
 /*
  * Private (non-shared) state for managing a ring of shared buffers to re-use.
@@ -84,20 +100,98 @@ typedef struct BufferAccessStrategyData
 	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
 }	BufferAccessStrategyData;
 
-
 /* Prototypes for internal functions */
 static volatile BufferDesc *GetBufferFromRing(BufferAccessStrategy strategy);
 static void AddBufferToRing(BufferAccessStrategy strategy,
 				volatile BufferDesc *buf);
 
-
+void printStack(){
+	// Print the stack trace from head to tail
+	StackNode *curNode = &LRUStack[StrategyControl->head];
+	int j = 0;
+	for (j = 0; j<StrategyControl->size ; j++){
+		printf("%d -> ",curNode->buf_id);
+		curNode = &LRUStack[curNode->next];
+	}
+	printf("\n\n");
+}
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
 // buf_id = identifier of accessed buffer page
 void 
-StrategyUpdateAccessedBuffer(int buf_id)
+StrategyUpdateAccessedBuffer(int buf_id, bool samepage)
 {
-	// to be implemented!
+	StackNode *curNode = 0;
+	//printf("Inserting : %d [ ",buf_id);
+	// if LRU_Stack is empty -> insert the head
+	//elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
+	//printf("Inside StUpAccBu, size = %d head =%d tail= %d , buf_id = %d \n", StrategyControl->size,StrategyControl->head,StrategyControl->tail,buf_id);
+	if (!StrategyControl->size){
+		// Create new node
+		LRUStack[0].buf_id = buf_id;
+		LRUStack[0].prev = NOT_IN_STACK;
+		LRUStack[0].accessed_time = 0;
+		StrategyControl->tail = 0;
+		StrategyControl->head = 0;
+		StrategyControl->size++;
+		if (StrategyControl->size <=NBuffers)
+			StrategyControl->freePos = StrategyControl->size;
+		else
+			StrategyControl->freePos = NOT_IN_STACK;
+	} else{
+		// Find the Node in the Stack
+		curNode = &LRUStack[StrategyControl->head];
+		int i = 0;
+		for (i=0;i <StrategyControl->size ;i++){
+			curNode = &LRUStack[i];
+			if (curNode->buf_id == buf_id)
+				break;
+		}
+		if (i < StrategyControl->size){ // found the node with the buf_id
+			if (i != StrategyControl->head) { // if the position is the head -> do nothing
+				if (i==StrategyControl->tail){ // tail position-> new tail
+					LRUStack[curNode->prev].next = NOT_IN_STACK; // position of the new tail next 	
+					StrategyControl->tail = curNode->prev; // new tail position
+					curNode->next = StrategyControl->head; // next position of the new head is the old head
+					curNode->prev = NOT_IN_STACK;				
+					if (samepage) 
+						curNode->accessed_time=0;
+					else 
+						curNode->accessed_time++;
+				}else{ // middle of the two node
+					//printf("middle curNode id = %d , curNode  next = %d ,curNode prev = %d\n",curNode->buf_id,curNode->next, curNode->prev);
+					LRUStack[curNode->prev].next = curNode->next;		// next of prev is next of cur
+					LRUStack[curNode->next].prev = curNode->prev;		// prev of next is prev of cur
+					curNode->next = StrategyControl->head; // next position of the new head is the old head
+					curNode->prev = NOT_IN_STACK;
+					if (samepage) 
+						curNode->accessed_time=0;
+					else 
+						curNode->accessed_time++;
+				}
+				LRUStack[StrategyControl->head].prev = i;
+					StrategyControl->head = i;		// update the head position
+			}
+		}else{ // Not found, insert to the next free slot:
+			//printf("new node, free slot = %d \n", StrategyControl->freePos);
+			curNode = &LRUStack[StrategyControl->freePos];
+			curNode->prev = NOT_IN_STACK;
+			curNode->next = StrategyControl->head; // next position of the new head is the old head
+			if (samepage) 
+				curNode->accessed_time=0;
+			else 
+				curNode->accessed_time++;
+			LRUStack[StrategyControl->head].prev = i;
+			curNode->buf_id = buf_id;
+			StrategyControl->head = i;		// update the head position
+			StrategyControl->size++;
+			if (StrategyControl->size <=NBuffers)
+				StrategyControl->freePos = StrategyControl->size;
+			else
+				StrategyControl->freePos = NOT_IN_STACK;
+		}
+	}
+	//printStack();
 }
 
 
@@ -123,8 +217,9 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
-	int			trycounter;
-
+	//elog(DEBUG2, "Get buffer ");
+	//elog(LOG, "Strategy first free buffer is %d ", StrategyControl->firstFreeBuffer);
+		//elog(LOG, "Get buffer:Stack size is %d ", StrategyControl->size);
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
 	 * assume strategy objects don't need the BufFreelistLock.
@@ -135,6 +230,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		if (buf != NULL)
 		{
 			*lock_held = false;
+			StrategyUpdateAccessedBuffer(buf->buf_id, false);
 			return buf;
 		}
 	}
@@ -192,57 +288,144 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		{
 			if (strategy != NULL)
 				AddBufferToRing(strategy, buf);
+			StrategyUpdateAccessedBuffer(buf->buf_id, false);
 			return buf;
 		}
 		UnlockBufHdr(buf);
 	}
 
-	/* Nothing on the freelist, so run the "clock sweep" algorithm */
-	trycounter = NBuffers;
-	for (;;)
-	{
-		buf = &BufferDescriptors[StrategyControl->nextVictimBuffer];
+	/* Nothing on the freelist, so run the LRU algorithm */
+	// initialized cur node to the least recently used( the tail of the stack) 
 
-		if (++StrategyControl->nextVictimBuffer >= NBuffers)
+	///elog(LOG, "Stack size is %d ", LRU_Control->size);
+	if (StrategyControl->size>0){
+		StackNode* curNode = &LRUStack[StrategyControl->tail];
+		//printf("Tail:%d \n",StrategyControl->tail);
+		
+		//Check if S1 is non-empty
+		for (;;)
 		{
-			StrategyControl->nextVictimBuffer = 0;
-			StrategyControl->completePasses++;
-		}
-
-		/*
-		 * If the buffer is pinned or has a nonzero usage_count, we cannot use
-		 * it; decrement the usage_count (unless pinned) and keep scanning.
-		 */
-		LockBufHdr(buf);
-		if (buf->refcount == 0)
-		{
-			if (buf->usage_count > 0)
+			//elog(DEBUG4, "Find victim ");
+			if (curNode->buf_id == NOT_IN_STACK)
 			{
-				buf->usage_count--;
-				trycounter = NBuffers;
+				//elog(ERROR, "Stack size is %d ", StrategyControl->size);
+				break;
+				/*
+				* We've scanned all the buffers without making any state changes,
+				* so all the buffers are pinned (or were when we looked at them).
+				* We could hope that someone will free one eventually, but it's
+				* probably better to fail than to risk getting stuck in an
+				* infinite loop.
+				*/
+				//elog(ERROR, "cur node is NULL");
 			}
-			else
+			buf = &BufferDescriptors[curNode->buf_id];
+			/*
+			* If the buffer is pinned , we cannot use
+			* move to the next least recently used buffer
+			*/
+			LockBufHdr(buf);
+			if (buf->refcount == 0 && curNode->accessed_time <= 1)	// If pin count = 0 -> choose the victim buffer
 			{
-				/* Found a usable buffer */
 				if (strategy != NULL)
 					AddBufferToRing(strategy, buf);
+				StrategyUpdateAccessedBuffer(buf->buf_id, false);
 				return buf;
 			}
-		}
-		else if (--trycounter == 0)
-		{
-			/*
-			 * We've scanned all the buffers without making any state changes,
-			 * so all the buffers are pinned (or were when we looked at them).
-			 * We could hope that someone will free one eventually, but it's
-			 * probably better to fail than to risk getting stuck in an
-			 * infinite loop.
-			 */
 			UnlockBufHdr(buf);
-			elog(ERROR, "no unpinned buffers available");
+			curNode=&LRUStack[curNode->prev];
 		}
-		UnlockBufHdr(buf);
+		//S2: apply LRU2 policy
+		curNode = &LRUStack[StrategyControl->tail];
+		StackNode* lastValidNode = NULL;
+		int secondLeast_trigger = 0;
+		for (;;)
+		{
+			//elog(DEBUG4, "Find victim ");
+			if (curNode->buf_id == NOT_IN_STACK)
+			{
+				//elog(ERROR, "Stack size is %d ", StrategyControl->size);
+				break;
+				/*
+				* We've scanned all the buffers without making any state changes,
+				* so all the buffers are pinned (or were when we looked at them).
+				* We could hope that someone will free one eventually, but it's
+				* probably better to fail than to risk getting stuck in an
+				* infinite loop.
+				*/
+				//elog(ERROR, "cur node is NULL");
+			}
+			buf = &BufferDescriptors[curNode->buf_id];
+			/*
+			* If the buffer is pinned , we cannot use
+			* move to the next least recently used buffer
+			*/
+			LockBufHdr(buf);
+			if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
+			{
+				if (secondLeast_trigger) {
+					if (strategy != NULL)
+						AddBufferToRing(strategy, buf);
+					StrategyUpdateAccessedBuffer(buf->buf_id, false);
+					return buf;
+				}
+				secondLeast_trigger = 1;
+				lastValidNode = curNode;
+			}
+			UnlockBufHdr(buf);
+			curNode=&LRUStack[curNode->prev];
+		}
+		//if we are left with only 1 buffer, take it, 
+		//no matter if it's by LRU or LRU-2
+		if (secondLeast_trigger) {
+			buf = &BufferDescriptors[lastValidNode->buf_id];
+			LockBufHdr(buf);
+			if (strategy != NULL)
+				AddBufferToRing(strategy, buf);
+			StrategyUpdateAccessedBuffer(buf->buf_id, false);
+			return buf;
+			UnlockBufHdr(buf);
+		}
+		else {
+			elog(ERROR, "Stack size is %d ", StrategyControl->size);
+		}
+	}else{
+		elog(ERROR, "Stack size is %d ", StrategyControl->size);
 	}
+}
+
+/* CS3223, delete the Node from LRU Stack*/
+void DeleteLRU_Stack(int buf_id){
+	// First we find the position of the node with the corresponding buf_id
+	//elog(LOG, "Delete and Stack size is %d ", StrategyControl->size);
+	StackNode* curNode = 0;
+	int i = 0;
+	for (i=0;i <StrategyControl->size ;i++){
+		curNode = &LRUStack[i];
+		if (curNode->buf_id == buf_id)
+			break;
+	}
+	if (StrategyControl->size==1){
+		StrategyControl->head = NOT_IN_STACK;
+		StrategyControl->tail = NOT_IN_STACK;
+		StrategyControl->freePos = 0;
+	} else {
+		StrategyControl->freePos = i;	// Position for free slot
+		if (curNode->buf_id == StrategyControl->head){
+			StrategyControl->head = curNode->next; // next head
+			LRUStack[StrategyControl->head].prev = NOT_IN_STACK;
+		} else if (curNode->buf_id == StrategyControl->tail){
+			StrategyControl->tail = curNode->prev;	// position of the new tail
+			LRUStack[StrategyControl->tail].next = NOT_IN_STACK;
+		} else {
+			LRUStack[curNode->prev].next = curNode->next;
+			LRUStack[curNode->next].prev = curNode->prev;	
+		}
+	}
+	curNode->next = NOT_IN_STACK;
+	curNode->prev = NOT_IN_STACK;
+	curNode->buf_id=NOT_IN_STACK;
+	StrategyControl->size--;
 }
 
 /*
@@ -252,7 +435,7 @@ void
 StrategyFreeBuffer(volatile BufferDesc *buf)
 {
 	LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-
+	elog(DEBUG3, "Gonna free buffer ");
 	/*
 	 * It is possible that we are told to put something in the freelist that
 	 * is already in it; don't screw up the list if so.
@@ -263,6 +446,7 @@ StrategyFreeBuffer(volatile BufferDesc *buf)
 		if (buf->freeNext < 0)
 			StrategyControl->lastFreeBuffer = buf->buf_id;
 		StrategyControl->firstFreeBuffer = buf->buf_id;
+		DeleteLRU_Stack(buf->buf_id);
 	}
 
 	LWLockRelease(BufFreelistLock);
@@ -338,6 +522,9 @@ StrategyShmemSize(void)
 	/* size of the shared replacement strategy control block */
 	size = add_size(size, MAXALIGN(sizeof(BufferStrategyControl)));
 
+	/* size of the LRU stack */
+	size = add_size(size, mul_size(NBuffers, sizeof(StackNode)));
+
 	return size;
 }
 
@@ -352,7 +539,7 @@ void
 StrategyInitialize(bool init)
 {
 	bool		found;
-
+	int i = 0;
 	/*
 	 * Initialize the shared buffer lookup hashtable.
 	 *
@@ -370,7 +557,7 @@ StrategyInitialize(bool init)
 	 */
 	StrategyControl = (BufferStrategyControl *)
 		ShmemInitStruct("Buffer Strategy Status",
-						sizeof(BufferStrategyControl),
+						sizeof(BufferStrategyControl) + NBuffers*sizeof(StackNode),
 						&found);
 
 	if (!found)
@@ -396,9 +583,47 @@ StrategyInitialize(bool init)
 
 		/* No pending notification */
 		StrategyControl->bgwriterLatch = NULL;
+
+		// CS3223: initialize the LRU stack
+		/*if (LRU_Control == NULL){
+			LRU_Control = (LRU_Stack*)malloc(sizeof(LRU_Stack));
+			LRU_Control->size = 0;
+			LRU_Control->head = NULL;
+			LRU_Control->tail = NULL;
+		}else{
+			elog(LOG, "Stack size in initialize is %d ", LRU_Control->size);
+		}*/
+		StrategyControl->size = 0;
+		
+		StrategyControl->tail = NOT_IN_STACK;
+		StrategyControl->head = NOT_IN_STACK;
+		StrategyControl->freePos = 0;
 	}
 	else
 		Assert(!init);
+
+	bool stack_found;
+	LRUStack = (StackNode *) ShmemInitStruct("LRU stack", NBuffers * sizeof(StackNode), &stack_found);
+	if(!stack_found)
+	{
+		/*
+		* Only done once, usually in postmaster
+		*/
+		Assert(init);
+		/*
+		* initilize entries in LRU_Stack
+		*/
+		StackNode *iter = LRUStack;
+		for (i=0;i<NBuffers;i++){
+			iter->buf_id = NOT_IN_STACK;
+			iter->next = NOT_IN_STACK;
+			iter->prev = NOT_IN_STACK;
+			iter++;
+		}
+	}
+	else
+		Assert(!init);
+
 }
 
 
