@@ -25,10 +25,10 @@ struct StackNode{
 	int next;
 	int prev;
 	int accessed_time;
-	int curNow;
-	int secLast;
+	struct timeval curNow;
+	struct timeval secLast;
 };
-
+//static long int acsTime = 0;
 typedef struct StackNode StackNode;
 /*
  * The shared freelist control information.
@@ -121,30 +121,6 @@ void printStack(){
 	}
 	printf("\n");
 }
-
-// cs3223 
-// Reupdate the access time
-void
-remarkAccess(){
-	int countDown = NBuffers;
-	int count = 0, SCsize = StrategyControl->size;
-	if (!StrategyControl->size) return;
-	StackNode *curNode = &LRUStack[StrategyControl->head];
-	//printf(" %d " , StrategyControl->head);
-	while (count< SCsize){
-		if (curNode->accessed_time == 1 && curNode->curNow > countDown){ // If the current node decrement in access time, we decrease the second last access as well		
-			curNode->secLast--;
-		}
-		if (curNode->accessed_time == 1)
-			printf("%d ",curNode->secLast);
-		curNode->curNow = countDown;
-		countDown--;
-		//printf(" %d ", curNode->next);
-		curNode=&LRUStack[curNode->next];
-		count++;
-	}
-	//printf("\n");
-}
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
 // buf_id = identifier of accessed buffer page
@@ -170,6 +146,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			StrategyControl->freePos = NOT_IN_STACK;
 
 		//time(&LRUStack[0].curNow); // update the most recent access time
+		gettimeofday(&LRUStack[0].curNow ,NULL);
 	} else{
 		// Find the Node in the Stack
 		curNode = &LRUStack[StrategyControl->head];
@@ -185,9 +162,10 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			if (StrategyControl->fromStraGet == 1){ // That means we choose a victim buffer
 				curNode->accessed_time = 0;
 			}else{
-				curNode->accessed_time =1; // We just need to know if the Node is accessed more than 1 time
+				curNode->accessed_time++;
 				// update the second last access time
 				curNode->secLast = curNode->curNow;
+				//printf("curNode->secLast %lu ", curNode->secLast.tv_usec);
 			}
 			
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
@@ -208,6 +186,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			}
 
 			//time(&curNode->curNow); // update the most recent access time
+			gettimeofday(&curNode->curNow,NULL);
 
 		}else{ // Not found, insert to the next free slot:
 			//printf("new node, free slot = %d \n", StrategyControl->freePos);
@@ -224,12 +203,12 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			else
 				StrategyControl->freePos = NOT_IN_STACK;
 			//time(&curNode->curNow); // update the most recent access time
+			 gettimeofday(&curNode->curNow,NULL);
 		}
 	}
 	
 	//printStack();
 	StrategyControl->fromStraGet = 0;
-	remarkAccess();
 }
 
 
@@ -371,7 +350,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		}
 		
 		// get from S2: the smallest second access time
-		printf("S2\t");
+		//printf("S2\t");
 		for (s2 = 0;s2 < SCsize; s2++){
 			curNode = &LRUStack[s2];
 			buf = &BufferDescriptors[curNode->buf_id];
@@ -381,7 +360,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				// get the node with min second last access time
 				if (minNode == NULL)		
 					minNode = curNode;
-				else if (minNode->secLast > curNode->secLast){ 
+				else if (minNode->secLast.tv_usec > curNode->secLast.tv_usec){ 
 					//(difftime(minNode->secLast,curNode->secLast )>0.0){ // Update minNode if secondLastTime > curNode
 					//printf(" update minNode , buf_id = %d ", minNode->buf_id);
 					minNode = curNode;
@@ -623,7 +602,6 @@ StrategyInitialize(bool init)
 	}
 	else
 		Assert(!init);
-
 }
 
 
