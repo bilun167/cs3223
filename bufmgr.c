@@ -113,7 +113,7 @@ static void AtProcExit_Buffers(int code, Datum arg);
 static int	rnode_comparator(const void *p1, const void *p2);
 
 // cs3223
-extern void StrategyUpdateAccessedBuffer(int buf_id, bool samepage);
+extern void StrategyUpdateAccessedBuffer(int buf_id);
 
 /*
  * PrefetchBuffer -- initiate asynchronous read of a block of a relation
@@ -596,7 +596,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 		// Update the LRU stack for the found buffer
 		// For simplicity, we use the bufFreelistLock for this update operation
 		LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-		StrategyUpdateAccessedBuffer(buf_id, true);
+		StrategyUpdateAccessedBuffer(buf_id);
 		LWLockRelease(BufFreelistLock);
 
 		return buf;
