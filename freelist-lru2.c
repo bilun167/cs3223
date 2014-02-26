@@ -165,7 +165,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				curNode->accessed_time++;
 				// update the second last access time
 				curNode->secLast = curNode->curNow;
-				printf("curNode->secLast %lu ", curNode->secLast.tv_usec);
+				//printf("curNode->secLast %lu ", curNode->secLast.tv_usec);
 			}
 			
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
