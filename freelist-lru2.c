@@ -130,6 +130,7 @@ StrategyUpdateAccessedBuffer(int buf_id, bool samepage)
 		// Create new node
 		LRUStack[0].buf_id = buf_id;
 		LRUStack[0].prev = NOT_IN_STACK;
+		LRUStack[0].next = NOT_IN_STACK;
 		LRUStack[0].accessed_time = 0;
 		StrategyControl->tail = 0;
 		StrategyControl->head = 0;
@@ -170,7 +171,7 @@ StrategyUpdateAccessedBuffer(int buf_id, bool samepage)
 						curNode->accessed_time++;
 				}
 				LRUStack[StrategyControl->head].prev = i;
-					StrategyControl->head = i;		// update the head position
+				StrategyControl->head = i;		// update the head position
 			}
 		}else{ // Not found, insert to the next free slot:
 			//printf("new node, free slot = %d \n", StrategyControl->freePos);
@@ -183,6 +184,10 @@ StrategyUpdateAccessedBuffer(int buf_id, bool samepage)
 				curNode->accessed_time++;
 			LRUStack[StrategyControl->head].prev = i;
 			curNode->buf_id = buf_id;
+			if (samepage) 
+				curNode->accessed_time=0;
+			else 
+				curNode->accessed_time++;
 			StrategyControl->head = i;		// update the head position
 			StrategyControl->size++;
 			if (StrategyControl->size <=NBuffers)
@@ -305,20 +310,6 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		//Check if S1 is non-empty
 		for (;;)
 		{
-			//elog(DEBUG4, "Find victim ");
-			if (curNode->buf_id == NOT_IN_STACK)
-			{
-				//elog(ERROR, "Stack size is %d ", StrategyControl->size);
-				break;
-				/*
-				* We've scanned all the buffers without making any state changes,
-				* so all the buffers are pinned (or were when we looked at them).
-				* We could hope that someone will free one eventually, but it's
-				* probably better to fail than to risk getting stuck in an
-				* infinite loop.
-				*/
-				//elog(ERROR, "cur node is NULL");
-			}
 			buf = &BufferDescriptors[curNode->buf_id];
 			/*
 			* If the buffer is pinned , we cannot use
@@ -333,28 +324,18 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				return buf;
 			}
 			UnlockBufHdr(buf);
+			if (curNode->prev == NOT_IN_STACK) {
+				break;
+			}
 			curNode=&LRUStack[curNode->prev];
 		}
 		//S2: apply LRU2 policy
 		curNode = &LRUStack[StrategyControl->tail];
 		StackNode* lastValidNode = NULL;
+		//printf("S2\n");
 		int secondLeast_trigger = 0;
 		for (;;)
 		{
-			//elog(DEBUG4, "Find victim ");
-			if (curNode->buf_id == NOT_IN_STACK)
-			{
-				//elog(ERROR, "Stack size is %d ", StrategyControl->size);
-				break;
-				/*
-				* We've scanned all the buffers without making any state changes,
-				* so all the buffers are pinned (or were when we looked at them).
-				* We could hope that someone will free one eventually, but it's
-				* probably better to fail than to risk getting stuck in an
-				* infinite loop.
-				*/
-				//elog(ERROR, "cur node is NULL");
-			}
 			buf = &BufferDescriptors[curNode->buf_id];
 			/*
 			* If the buffer is pinned , we cannot use
@@ -373,6 +354,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				lastValidNode = curNode;
 			}
 			UnlockBufHdr(buf);
+			if (curNode->prev == -1 ) break;
 			curNode=&LRUStack[curNode->prev];
 		}
 		//if we are left with only 1 buffer, take it, 
