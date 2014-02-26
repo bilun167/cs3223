@@ -23,6 +23,7 @@ struct StackNode{
 	int buf_id;
 	int next;
 	int prev;
+	int accessed_time;
 };
 
 typedef struct StackNode StackNode;
@@ -151,10 +152,11 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			volatile BufferDesc *buf;
 			
 			//Main bug lies HERE: unpin page -> reset accessed_time to zero
-			buf = &BufferDescriptors[curNode->buf_id];
+			/*\\buf = &BufferDescriptors[curNode->buf_id];
 			if (buf->usage_count) 
 				curNode->accessed_time++;
-			else curNode->accessed_time = 0;
+			else curNode->accessed_time = 0;*/
+			curNode->accessed_time++;
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
 				if (i==StrategyControl->tail){ // tail position-> new tail
 					LRUStack[curNode->prev].next = NOT_IN_STACK; // position of the new tail next 	
@@ -284,6 +286,25 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		{
 			if (strategy != NULL)
 				AddBufferToRing(strategy, buf);
+			if (StrategyControl->size) {
+				StackNode* curNode = &LRUStack[StrategyControl->tail];
+				bool isTraversed = false;
+				for (;;)
+				{
+					if (curNode->buf_id == buf->buf_id) break;
+					if (curNode->prev == NOT_IN_STACK) 
+					{
+						isTraversed = true;
+						break;
+					}
+					curNode = &LRUStack[curNode->prev];
+				}
+				if (!isTraversed) 
+				{
+					printf("Accessed_time reset\t");
+					curNode->accessed_time=0;
+				}
+			}
 			StrategyUpdateAccessedBuffer(buf->buf_id);
 			return buf;
 		}
@@ -297,6 +318,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	//printf("Tail:%d \n",StrategyControl->tail);
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
 	if (StrategyControl->size>0){
+		printf("S1\t");
 		for (;;)
 		{
 			//elog(DEBUG4, "Find victim ");
@@ -307,7 +329,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 			* move to the next least recently used buffer
 			*/
 			LockBufHdr(buf);
-			if (buf->refcount == 0 && curNode->accessed_time <= 1)	// If pin count = 0 -> choose the victim buffer
+			if (buf->refcount == 0 && curNode->accessed_time < 1)	// If pin count = 0 -> choose the victim buffer
 			{
 				if (strategy != NULL)
 					AddBufferToRing(strategy, buf);
@@ -333,7 +355,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		
 		printf("S2\t");
 		curNode = lastValidNode;
-		int secondLeast_trigger;
+		int secondLeast_trigger = 0;
 		for (;;)
 		{
 			//elog(DEBUG4, "Find victim ");
@@ -352,11 +374,15 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 					StrategyUpdateAccessedBuffer(buf->buf_id);
 					return buf;
 				}
-				else secondLeast_trigger = 1;
+				else {
+					secondLeast_trigger = 1;
+					lastValidNode = curNode;
+				}
 			}
 			UnlockBufHdr(buf);
 			if (curNode->prev == NOT_IN_STACK)
 			{
+				//printf("No choice. Change back to S1\t");
 				if (secondLeast_trigger) {
 					buf = &BufferDescriptors[lastValidNode->buf_id];
 					/*
@@ -364,16 +390,10 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 					* move to the next least recently used buffer
 					*/
 					LockBufHdr(buf);
-					if (buf->refcount == 0)	// If pin count = 0 -> choose the victim buffer
-					{
-						if (secondLeast_trigger) {
-							if (strategy != NULL)
-								AddBufferToRing(strategy, buf);
-							StrategyUpdateAccessedBuffer(buf->buf_id);
-							return buf;
-						}
-						else secondLeast_trigger = 1;
-					}
+					if (strategy != NULL)
+						AddBufferToRing(strategy, buf);
+					StrategyUpdateAccessedBuffer(buf->buf_id);
+					return buf;
 					UnlockBufHdr(buf);
 				}
 				elog(ERROR, "No buffer");
