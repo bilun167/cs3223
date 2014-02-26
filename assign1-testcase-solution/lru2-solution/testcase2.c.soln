@@ -9,25 +9,25 @@ Beginning tests...
 [e][f][c][d]
 [e][f][g][d]
 [e][f][g][h]
-[i][f][g][h]
-[i][f][j][h]
-[i][k][j][h]
-[i][k][j][l]
-[m][k][j][l]
-[m][n][j][l]
-[m][n][j][o]
-[p][n][j][o]
-[q][n][j][o]
-[q][r][j][o]
-[q][r][j][s]
-[q][r][j][t]
-[q][r][j][u]
-[q][r][j][v]
-[q][r][j][w]
-[q][r][j][x]
-[q][r][y][x]
-[q][r][a][x]
-[q][b][a][x]
+[i][f][g][h]		i,h,g,f
+[i][f][j][h]		j*,i,h,f	(sec j =10)
+[i][k][j][h]		k,j*,i,h
+[i][k][j][l]		l,k,j*,i
+[m][k][j][l]		m,l,k,j*
+[m][n][j][l]		n,m,l,j*
+[m][n][j][o]		o,n,m,j*
+[p][n][j][o]		p,o,n,j*
+[q][n][j][o]		q*,o,n,j* (sec j = 10, sec q =20)
+[q][r][j][o]		r*,q*,o,j* (sec j =10,sec q=20, sec r = 19)
+[q][r][j][s]		s,r*,q*,j*
+[q][r][j][t]		t,r*,q*,j*
+[q][r][j][u]		u,r*,q*,j*
+[q][r][j][v]		v,r*,q*,j*
+[q][r][j][w]		w,r*,q*,j*
+[q][r][j][x]		x*,r*,q*,j*	(sec j =10,sec q=20, sec r = 19, sec x = 26)
+[q][r][y][x]		y,x*,r*,q*
+[q][r][a][x]		a*,x*,r*,q*	(sec q=20, sec r = 19, sec a = 28)
+[q][b][a][x]		
 [q][c][a][x]
 [q][d][a][x]
 [q][e][a][x]

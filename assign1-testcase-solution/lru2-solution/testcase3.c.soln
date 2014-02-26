@@ -4,64 +4,64 @@ Beginning tests...
 [a][#][#][#]
 [a][b][#][#]
 [a][b][c][#]
-[a][b][c][d]
-[e][b][c][d]
-[e][f][c][d]
-[e][f][g][d]
-[e][f][g][h]
-[i][f][g][h]
-[i][j][g][h]
-[i][j][k][h]
-[i][j][k][l]
-[m][j][k][l]
-[m][n][k][l]
-[m][n][o][l]
-[m][n][o][p]
-[m][q][o][p]
-[m][q][r][p]
-[m][q][r][s]
-[m][t][r][s]
-[m][u][r][s]
-[m][u][v][s]
-[m][u][v][w]
-[m][u][x][w]
-[m][u][x][y]
-[m][u][a][y]
-[m][u][a][b]
-[m][u][c][b]
-[m][u][c][d]
-[e][u][c][d]
-[e][u][f][d]
-[e][u][f][g]
-[e][u][h][g]
-[e][u][h][i]
-[e][u][j][i]
-[e][u][j][k]
-[e][u][l][k]
-[e][u][l][m]
-[e][u][n][m]
-[e][u][n][o]
-[e][u][p][o]
-[e][u][p][q]
-[e][u][r][q]
-[e][u][r][s]
-[e][u][t][s]
-[e][u][t][u]
-[e][u][v][u]
-[w][u][v][u]
-[w][u][v][x]
-[w][u][y][x]
-[w][u][y][a]
-[w][u][b][a]
-[w][u][b][c]
-[w][u][b][d]
-[w][e][b][d]
-[w][e][f][d]
-[w][e][g][d]
-[w][h][g][d]
-[w][h][g][i]
-[w][j][g][i]
-[w][j][k][i]
+[a][b][c][d]		d,c,b,a
+[e][b][c][d]		e,d,c,b
+[e][f][c][d]		f,e,d,c
+[e][f][g][d]		g,f,e,d
+[e][f][g][h]		h,g,f,e
+[i][f][g][h]		i,h,g,f
+[i][j][g][h]		j,i,h,g
+[i][j][k][h]		k,j,i,h
+[i][j][k][l]		l,k,j,i
+[m][j][k][l]		m*,l,k,j	(m=2)
+[m][n][k][l]		n,m*,l,k
+[m][n][o][l]		o,n,m*,l
+[m][n][o][p]		p,o,n,m*
+[m][q][o][p]		q,p,o,m*
+[m][q][r][p]		r,q,p,m*
+[m][q][r][s]		s,r,q,m*
+[m][t][r][s]		t,s,r,m*
+[m][u][r][s]		u*,s,r,m*	(m=2, u=2)
+[m][u][v][s]		v,u*,s,m*
+[m][u][v][w]		w,v,u*,m*
+[m][u][x][w]		x,w,u*,m*
+[m][u][x][y]		y,x,u*,m*
+[m][u][a][y]		a,y,u*,m*
+[m][u][a][b]		b,a,u*,m*
+[m][u][c][b]		c,b,u*,m*
+[m][u][c][d]		d,c,u*,m*
+[e][u][c][d]		e*,d,c,u*	(u=2, e=3)
+[e][u][f][d]		f,d,e*,u*
+[e][u][f][g]		g,f,e*,u*
+[e][u][h][g]		h,g,e*,u*
+[e][u][h][i]		i,h,e*,u*
+[e][u][j][i]		j,i,e*,u*
+[e][u][j][k]		k,j,e*,u*
+[e][u][l][k]		l,k,e*,u*
+[e][u][l][m]		m,l,e*,u*
+[e][u][n][m]		n,m,e*,u*
+[e][u][n][o]		o,n,e*,u*
+[e][u][p][o]		p,o,e*,u*
+[e][u][p][q]		q,p,e*,u*
+[e][u][r][q]		r,q,e*,u*
+[e][u][r][s]		s,r,e*,u*
+[e][u][t][s]		t,s,e*,u*
+[e][u][t][u]		u,t,e*,u*
+[e][u][v][u]		v,u,e*,u*
+[w][u][v][u]		w*,v,u,u*	(u=2, w=4)
+[w][u][v][x]		x,w*,v,u*
+[w][u][y][x]		y,x,w*,u*
+[w][u][y][a]		a,y,w*,u*
+[w][u][b][a]		b,a,w*,u*
+[w][u][b][c]		c,b,w*,u*
+[w][u][b][d]		d*,b,w*,u*	(u=2 w=4 d=2)
+[w][e][b][d]		e*,d*,b,w*	 (w=4	d=2	e=3)
+[w][e][f][d]		f,e*,d*,w*
+[w][e][g][d]		g*,e*,d*,w*	(w=4 d=2 e=3 g=2)
+[w][h][g][d]		h,g*,d*,w*
+[w][h][g][i]		i*,h,g*,w*	(w=4 g=2 i=2)
+[w][j][g][i]		j*,i*,g*,w*	(w=4 g=2 i=2 j=2)
+[w][j][k][i]		
 [l][j][k][i]
 [m][j][k][i]
 [n][j][k][i]

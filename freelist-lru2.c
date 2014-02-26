@@ -17,12 +17,16 @@
 
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
+#include <time.h>
 
 #define NOT_IN_STACK -1
 struct StackNode{
 	int buf_id;
 	int next;
 	int prev;
+	int accessed_time;
+	time_t cur;
+	time_t prev;
 };
 
 typedef struct StackNode StackNode;
@@ -59,6 +63,7 @@ typedef struct
 	int head;
 	int size;
 	int freePos;
+	int fromStraGet ;
 } BufferStrategyControl;
 
 /* Pointers to shared state */
@@ -109,11 +114,12 @@ void printStack(){
 	// Print the stack trace from head to tail
 	StackNode *curNode = &LRUStack[StrategyControl->head];
 	int j = 0;
+	printf("FromStraget = %d ", StrategyControl->fromStraGet);
 	for (j = 0; j<StrategyControl->size ; j++){
 		printf("%d -> ",curNode->buf_id);
 		curNode = &LRUStack[curNode->next];
 	}
-	printf("\n\n");
+	printf("\n");
 }
 // cs3223
 // Updates the LRU stack for an accessed buffer page 
@@ -152,9 +158,15 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			
 			//Main bug lies HERE: unpin page -> reset accessed_time to zero
 			buf = &BufferDescriptors[curNode->buf_id];
-			if (buf->usage_count) 
+			if (StrategyControl->fromStraGet == 1){ // That means we choose a victim buffer
+				curNode->accessed_time = 0;
+			}else{
 				curNode->accessed_time++;
-			else curNode->accessed_time = 0;
+				//printf("Increase accessed time to %d ", curNode->accessed_time);
+			}
+			/*if (buf->usage_count) 
+				curNode->accessed_time++;
+			else curNode->accessed_time = 0;*/
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
 				if (i==StrategyControl->tail){ // tail position-> new tail
 					LRUStack[curNode->prev].next = NOT_IN_STACK; // position of the new tail next 	
@@ -187,7 +199,9 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				StrategyControl->freePos = NOT_IN_STACK;
 		}
 	}
+	
 	//printStack();
+	StrategyControl->fromStraGet = 0;
 }
 
 
@@ -213,6 +227,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 {
 	volatile BufferDesc *buf;
 	Latch	   *bgwriterLatch;
+
 	//elog(DEBUG2, "Get buffer ");
 	//elog(LOG, "Strategy first free buffer is %d ", StrategyControl->firstFreeBuffer);
 		//elog(LOG, "Get buffer:Stack size is %d ", StrategyControl->size);
@@ -296,6 +311,8 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 	StackNode* lastValidNode = curNode;
 	//printf("Tail:%d \n",StrategyControl->tail);
 	///elog(LOG, "Stack size is %d ", LRU_Control->size);
+	StrategyControl->fromStraGet = 1;
+	//printf("Choosing victim, fromStraGet = %d \n", StrategyControl->fromStraGet);
 	if (StrategyControl->size>0){
 		for (;;)
 		{
@@ -307,7 +324,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 			* move to the next least recently used buffer
 			*/
 			LockBufHdr(buf);
-			if (buf->refcount == 0 && curNode->accessed_time <= 1)	// If pin count = 0 -> choose the victim buffer
+			if (buf->refcount == 0 && curNode->accessed_time <= 0)	// If pin count = 0 -> choose the victim buffer
 			{
 				if (strategy != NULL)
 					AddBufferToRing(strategy, buf);
@@ -589,6 +606,7 @@ StrategyInitialize(bool init)
 		StrategyControl->tail = NOT_IN_STACK;
 		StrategyControl->head = NOT_IN_STACK;
 		StrategyControl->freePos = 0;
+		StrategyControl->fromStraGet = false;
 	}
 	else
 		Assert(!init);

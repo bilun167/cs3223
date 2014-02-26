@@ -3,14 +3,14 @@ Beginning tests...
 [#][#][#]
 [a][#][#]
 [a][b][#]
-[a][b](c)
-[d][b](c)
-[d][e](c)
-[d][f](c)
-[d][g](c)
-[d][h](c)
-[d][i](c)
-[d](j)(c)
+[a][b](c)		c,b,a
+[d][b](c)		d*,c,b		(d=2)
+[d][e](c)		e,d*,c
+[d][f](c)		f,d*,c
+[d][g](c)		g,d*,c
+[d][h](c)		h,d*,c
+[d][i](c)		i,d*,c
+[d](j)(c)		j,d*,c
 [k](j)(c)
 [k](l)(c)
 [m](l)(c)
