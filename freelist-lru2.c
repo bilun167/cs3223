@@ -25,10 +25,10 @@ struct StackNode{
 	int next;
 	int prev;
 	int accessed_time;
-	long int curNow;
-	long int secLast;
+	struct timeval curNow;
+	struct timeval secLast;
 };
-static long int acsTime = 0;
+//static long int acsTime = 0;
 typedef struct StackNode StackNode;
 /*
  * The shared freelist control information.
@@ -146,7 +146,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			StrategyControl->freePos = NOT_IN_STACK;
 
 		//time(&LRUStack[0].curNow); // update the most recent access time
-		LRUStack[0].curNow = acsTime;
+		gettimeofday(&LRUStack[0].curNow ,NULL);
 	} else{
 		// Find the Node in the Stack
 		curNode = &LRUStack[StrategyControl->head];
@@ -165,6 +165,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				curNode->accessed_time++;
 				// update the second last access time
 				curNode->secLast = curNode->curNow;
+				printf("curNode->secLast %lu ", curNode->secLast.tv_usec);
 			}
 			
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
@@ -185,7 +186,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			}
 
 			//time(&curNode->curNow); // update the most recent access time
-			curNode->curNow = acsTime;
+			gettimeofday(&curNode->curNow,NULL);
 
 		}else{ // Not found, insert to the next free slot:
 			//printf("new node, free slot = %d \n", StrategyControl->freePos);
@@ -202,13 +203,12 @@ StrategyUpdateAccessedBuffer(int buf_id)
 			else
 				StrategyControl->freePos = NOT_IN_STACK;
 			//time(&curNode->curNow); // update the most recent access time
-			curNode->curNow = acsTime;
+			 gettimeofday(&curNode->curNow,NULL);
 		}
 	}
 	
 	//printStack();
 	StrategyControl->fromStraGet = 0;
-	acsTime++;
 }
 
 
@@ -360,7 +360,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				// get the node with min second last access time
 				if (minNode == NULL)		
 					minNode = curNode;
-				else if (minNode->secLast > curNode->secLast){ 
+				else if (minNode->secLast.tv_usec > curNode->secLast.tv_usec){ 
 					//(difftime(minNode->secLast,curNode->secLast )>0.0){ // Update minNode if secondLastTime > curNode
 					//printf(" update minNode , buf_id = %d ", minNode->buf_id);
 					minNode = curNode;
@@ -602,8 +602,6 @@ StrategyInitialize(bool init)
 	}
 	else
 		Assert(!init);
-	acsTime = 0;
-
 }
 
 
