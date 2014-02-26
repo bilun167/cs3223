@@ -19,7 +19,7 @@ int NBuffers;
 	(a).blockNum = (b) \
 )
 
-extern void StrategyUpdateAccessedBuffer(int buf_id);
+extern void StrategyUpdateAccessedBuffer(int buf_id, bool samepage);
 
 void
 printBuffers() {
@@ -55,7 +55,7 @@ findPage(BufferTag *btag, bool adjust) {
 			   btag->blockNum == oldtag->blockNum)
 			{
 				if(adjust)
-					StrategyUpdateAccessedBuffer(i);
+					StrategyUpdateAccessedBuffer(i, true);
 				return buf;
 			}
 		}
