@@ -289,18 +289,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		for (;;)
 		{
 			//elog(DEBUG4, "Find victim ");
-			if (curNode->buf_id == NOT_IN_STACK)
-			{
-				elog(ERROR, "Stack size is %d ", StrategyControl->size);
-				/*
-				* We've scanned all the buffers without making any state changes,
-				* so all the buffers are pinned (or were when we looked at them).
-				* We could hope that someone will free one eventually, but it's
-				* probably better to fail than to risk getting stuck in an
-				* infinite loop.
-				*/
-				//elog(ERROR, "cur node is NULL");
-			}
+
 			buf = &BufferDescriptors[curNode->buf_id];
 			/*
 			* If the buffer is pinned , we cannot use
@@ -315,6 +304,18 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				return buf;
 			}
 			UnlockBufHdr(buf);
+			if (curNode->prev == NOT_IN_STACK)
+			{
+				elog(ERROR, "Stack size is %d ", StrategyControl->size);
+				/*
+				* We've scanned all the buffers without making any state changes,
+				* so all the buffers are pinned (or were when we looked at them).
+				* We could hope that someone will free one eventually, but it's
+				* probably better to fail than to risk getting stuck in an
+				* infinite loop.
+				*/
+				//elog(ERROR, "cur node is NULL");
+			}
 			curNode=&LRUStack[curNode->prev];
 		}
 	}else{
