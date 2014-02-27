@@ -128,9 +128,7 @@ void
 StrategyUpdateAccessedBuffer(int buf_id)
 {
 	StackNode *curNode = 0;
-	//printf("Inserting : %d [ ",buf_id);
 	// if LRU_Stack is empty -> insert the head
-	//elog(LOG,"Inside StUpAccBu, size = %d ", StrategyControl->size);
 	//printf("Inside StUpAccBu, size = %d head =%d tail= %d , buf_id = %d \n", StrategyControl->size,StrategyControl->head,StrategyControl->tail,buf_id);
 	if (!StrategyControl->size){
 		// Create new node
@@ -157,7 +155,6 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				break;
 		}
 		if (i < StrategyControl->size){ // found the node with the buf_id
-			//volatile BufferDesc *buf;
 			
 			if (StrategyControl->fromStraGet == 1){ // That means we choose a victim buffer
 				curNode->accessed_time = 0;
@@ -165,7 +162,6 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				curNode->accessed_time++;
 				// update the second last access time
 				curNode->secLast = curNode->curNow;
-				//printf("curNode->secLast %lu ", curNode->secLast.tv_usec);
 			}
 			
 			if (i != StrategyControl->head) { // if the position is the head -> do nothing
@@ -185,7 +181,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 					StrategyControl->head = i;		// update the head position
 			}
 
-			//time(&curNode->curNow); // update the most recent access time
+			// update the most recent access time
 			gettimeofday(&curNode->curNow,NULL);
 
 		}else{ // Not found, insert to the next free slot:
@@ -202,7 +198,7 @@ StrategyUpdateAccessedBuffer(int buf_id)
 				StrategyControl->freePos = StrategyControl->size;
 			else
 				StrategyControl->freePos = NOT_IN_STACK;
-			//time(&curNode->curNow); // update the most recent access time
+			// update the most recent access time
 			 gettimeofday(&curNode->curNow,NULL);
 		}
 	}
@@ -350,7 +346,6 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 		}
 		
 		// get from S2: the smallest second access time
-		//printf("S2\t");
 		for (s2 = 0;s2 < SCsize; s2++){
 			curNode = &LRUStack[s2];
 			buf = &BufferDescriptors[curNode->buf_id];
@@ -361,11 +356,9 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 				if (minNode == NULL)		
 					minNode = curNode;
 				else if (minNode->secLast.tv_usec > curNode->secLast.tv_usec){ 
-					//(difftime(minNode->secLast,curNode->secLast )>0.0){ // Update minNode if secondLastTime > curNode
-					//printf(" update minNode , buf_id = %d ", minNode->buf_id);
+					// Update minNode if secondLastTime > curNode
 					minNode = curNode;
 				}
-				//printf(" minNode sec last %lu " , minNode->secLast);
 			}
 		}
 		// Find the min Node, get the buffer from it
