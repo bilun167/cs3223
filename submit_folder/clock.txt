@@ -1,0 +1,14 @@
+transaction type: TPC-B (sort of)
+scaling factor: 10
+query mode: simple
+number of clients: 10
+number of threads: 1
+duration: 180 s
+number of transactions actually processed: 52084
+tps = 289.378584 (including connections establishing)
+tps = 289.738809 (excluding connections establishing)
+ heap_read | heap_hit |         ratio          
+-----------+----------+------------------------
+    139923 |   601379 | 0.81124696817221591200
+(1 row)
+
