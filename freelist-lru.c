@@ -450,7 +450,7 @@ StrategyShmemSize(void)
 	/* size of the shared replacement strategy control block */
 	size = add_size(size, MAXALIGN(sizeof(BufferStrategyControl)));
 
-	/* size of the LRU stack */
+	/* CS3223: size of the LRU stack */
 	size = add_size(size, mul_size(NBuffers, sizeof(StackNode)));
 
 	return size;
