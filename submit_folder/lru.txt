@@ -4,11 +4,11 @@ query mode: simple
 number of clients: 10
 number of threads: 1
 duration: 180 s
-number of transactions actually processed: 34472
-tps = 191.391514 (including connections establishing)
-tps = 191.763872 (excluding connections establishing)
+number of transactions actually processed: 43800
+tps = 243.346267 (including connections establishing)
+tps = 244.133954 (excluding connections establishing)
  heap_read | heap_hit |         ratio          
 -----------+----------+------------------------
-     93053 |   447935 | 0.82799433628842044556
+    115574 |   588482 | 0.83584544411240014999
 (1 row)
 
