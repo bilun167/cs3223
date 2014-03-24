@@ -1,0 +1,204 @@
+Initializing buffer pool with 4 pages
+Beginning tests...
+[#][#][#][#]
+[a][#][#][#]
+[a][b][#][#]
+[a][b][c][#]
+[a][b][c][d]		d,c,b,a
+[e][b][c][d]		e,d,c,b
+[e][f][c][d]		f,e,d,c
+[e][f][g][d]		g,f,e,d
+[e][f][g][h]		h,g,f,e
+[i][f][g][h]		i,h,g,f
+[i][j][g][h]		j,i,h,g
+[i][j][k][h]		k,j,i,h
+[i][j][k][l]		l,k,j,i
+[m][j][k][l]		m*,l,k,j	(m=2)
+[m][n][k][l]		n,m*,l,k
+[m][n][o][l]		o,n,m*,l
+[m][n][o][p]		p,o,n,m*
+[m][q][o][p]		q,p,o,m*
+[m][q][r][p]		r,q,p,m*
+[m][q][r][s]		s,r,q,m*
+[m][t][r][s]		t,s,r,m*
+[m][u][r][s]		u*,s,r,m*	(m=2, u=2)
+[m][u][v][s]		v,u*,s,m*
+[m][u][v][w]		w,v,u*,m*
+[m][u][x][w]		x,w,u*,m*
+[m][u][x][y]		y,x,u*,m*
+[m][u][a][y]		a,y,u*,m*
+[m][u][a][b]		b,a,u*,m*
+[m][u][c][b]		c,b,u*,m*
+[m][u][c][d]		d,c,u*,m*
+[e][u][c][d]		e*,d,c,u*	(u=2, e=3)
+[e][u][f][d]		f,d,e*,u*
+[e][u][f][g]		g,f,e*,u*
+[e][u][h][g]		h,g,e*,u*
+[e][u][h][i]		i,h,e*,u*
+[e][u][j][i]		j,i,e*,u*
+[e][u][j][k]		k,j,e*,u*
+[e][u][l][k]		l,k,e*,u*
+[e][u][l][m]		m,l,e*,u*
+[e][u][n][m]		n,m,e*,u*
+[e][u][n][o]		o,n,e*,u*
+[e][u][p][o]		p,o,e*,u*
+[e][u][p][q]		q,p,e*,u*
+[e][u][r][q]		r,q,e*,u*
+[e][u][r][s]		s,r,e*,u*
+[e][u][t][s]		t,s,e*,u*
+[e][u][t][u]		u,t,e*,u*
+[e][u][v][u]		v,u,e*,u*
+[w][u][v][u]		w*,v,u,u*	(u=2, w=4)
+[w][u][v][x]		x,w*,v,u*
+[w][u][y][x]		y,x,w*,u*
+[w][u][y][a]		a,y,w*,u*
+[w][u][b][a]		b,a,w*,u*
+[w][u][b][c]		c,b,w*,u*
+[w][u][b][d]		d*,b,w*,u*	(u=2 w=4 d=2)
+[w][e][b][d]		e*,d*,b,w*	 (w=4	d=2	e=3)
+[w][e][f][d]		f,e*,d*,w*
+[w][e][g][d]		g*,e*,d*,w*	(w=4 d=2 e=3 g=2)
+[w][h][g][d]		h,g*,d*,w*
+[w][h][g][i]		i*,h,g*,w*	(w=4 g=2 i=2)
+[w][j][g][i]		j*,i*,g*,w*	(w=4 g=2 i=2 j=2)
+[w][j][k][i]		
+[l][j][k][i]
+[m][j][k][i]
+[n][j][k][i]
+[o][j][k][i]
+[p][j][k][i]
+[q][j][k][i]
+[r][j][k][i]
+[s][j][k][i]
+[t][j][k][i]
+[u][j][k][i]
+[u][v][k][i]
+[u][v][k][w]
+[x][v][k][w]
+[x][v][k][y]
+[x][a][k][y]
+[x][a][k][b]
+[x][a][k][c]
+[x][a][k][d]
+[x][a][k][e]
+[x][a][k][f]
+[x][a][k][g]
+[x][a][k][h]
+[i][a][k][h]
+[i][a][k][j]
+[i][a][k][k]
+[i][a][k][l]
+[i][a][k][m]
+[i][a][k][n]
+[i][a][k][o]
+[i][a][k][p]
+[i][a][k][q]
+[i][a][k][r]
+[i][a][k][s]
+[i][a][k][t]
+[i][a][k][u]
+[i][a][k][v]
+[i][a][k][w]
+[i][x][k][w]
+[i][x][k][y]
+[i][x][k][a]
+[i][x][k][b]
+[i][c][k][b]
+[i][c][k][d]
+[i][c][e][d]
+[i][c][f][d]
+[i][c][g][d]
+[i][c][h][d]
+[i][c][i][d]
+[i][c][j][d]
+[i][c][j][k]
+[i][c][l][k]
+[i][c][m][k]
+[i][c][n][k]
+[i][c][o][k]
+[i][c][o][p]
+[i][c][q][p]
+[i][c][r][p]
+[i][c][s][p]
+[i][t][s][p]
+[i][t][u][p]
+[i][t][v][p]
+[i][t][w][p]
+[i][t][x][p]
+[i][y][x][p]
+[i][y][a][p]
+[i][y][b][p]
+[i][y][c][p]
+[i][y][d][p]
+[i][y][e][p]
+[f][y][e][p]
+[g][y][e][p]
+[h][y][e][p]
+[i][y][e][p]
+[j][y][e][p]
+[k][y][e][p]
+[l][y][e][p]
+[m][y][e][p]
+[n][y][e][p]
+[o][y][e][p]
+[o][p][e][p]
+[o][q][e][p]
+[r][q][e][p]
+[s][q][e][p]
+[s][q][e][t]
+[s][q][e][u]
+[s][q][v][u]
+[s][q][v][w]
+[s][q][v][x]
+[s][q][v][y]
+[s][q][v][a]
+[b][q][v][a]
+[b][q][v][c]
+[b][q][v][d]
+[b][q][v][e]
+[b][q][v][f]
+[b][q][v][g]
+[b][q][v][h]
+[b][q][v][i]
+[b][q][v][j]
+[b][q][v][k]
+[b][q][v][l]
+[b][q][v][m]
+[b][q][v][n]
+[b][o][v][n]
+[b][o][v][p]
+[b][o][v][q]
+[b][o][r][q]
+[b][o][s][q]
+[b][o][t][q]
+[b][o][u][q]
+[b][o][v][q]
+[b][o][w][q]
+[b][o][x][q]
+[b][o][y][q]
+[b][o][a][q]
+[b][b][a][q]
+[b][b][c][q]
+[d][b][c][q]
+[e][b][c][q]
+[f][b][c][q]
+[g][b][c][q]
+[h][b][c][q]
+[i][b][c][q]
+[j][b][c][q]
+[k][b][c][q]
+[l][b][c][q]
+[m][b][c][q]
+[m][b][c][n]
+[o][b][c][n]
+[o][b][c][p]
+[q][b][c][p]
+[r][b][c][p]
+[s][b][c][p]
+[s][t][c][p]
+[u][t][c][p]
+[v][t][c][p]
+[w][t][c][p]
+[w][t][x][p]
+[y][t][x][p]
+Finished.
