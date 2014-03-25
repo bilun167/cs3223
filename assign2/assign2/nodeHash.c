@@ -51,7 +51,7 @@ static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
  void bitHash(Datum keyval, HashJoinTable hashtable){
 	 switch (hash_method){
 	 case 1:
-		 hashMeth1(Datum keyval, HashJoinTable hashtable);
+		 hashMeth1(keyval, hashtable);
 		 break;
 	 }
  }
@@ -62,8 +62,8 @@ static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 	  */
 	 int i=0;
 	 int h;
-	 int maxPart = bitvector_size*256; (maximum number of partitions);
-	 int curP = hashtable->bitvector;
+	 int maxPart = bitvector_size*256;  // maximum number of partitions 
+	 int *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
 		h = GET_4_BYTES(keyval)*i % 32;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
@@ -835,7 +835,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 		 * Get the join attribute value of the tuple
 		 */
 		keyval = ExecEvalExpr(keyexpr, econtext, &isNull, NULL);
-		printf("keyval: %d\n", GET_4_BYTES(keyval);
+		printf("keyval: %d\n", GET_4_BYTES(keyval));
 		/*
 		 * If the attribute is NULL, and the join operator is strict, then
 		 * this tuple cannot pass the join qual so we can reject it

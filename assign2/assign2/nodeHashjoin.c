@@ -53,7 +53,7 @@ static bool ExecHashJoinNewBatch(HashJoinState *hjstate);
 int bitCheck(Datum keyval, HashJoinTable hashtable){
 	switch (hash_method){
 	 case 1:
-		 return checkMeth1(Datum keyval, HashJoinTable hashtable);
+		 return checkMeth1(keyval, hashtable);
 		 break;
 	 }
 }
@@ -64,8 +64,8 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	  */
 	 int i=0;
 	 int h;
-	 int maxPart = bitvector_size*256; (maximum number of partitions);
-	 int curP = hashtable->bitvector;
+	 int maxPart = bitvector_size*256; //maximum number of partitions;
+	 int *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
 		h = GET_4_BYTES(keyval)*i % 32;
 		// check the bitvector partition if bit h is also set:
