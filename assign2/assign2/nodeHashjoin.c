@@ -49,32 +49,7 @@ static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
 static bool ExecHashJoinNewBatch(HashJoinState *hjstate);
 
 
-// cs3223 the method to check the tuple S to the bit vector
-int bitCheck(Datum keyval, HashJoinTable hashtable){
-	switch (hash_method){
-	 case 1:
-		 return checkMeth1(keyval, hashtable);
-		 break;
-	 }
-}
 
- int checkMeth1(Datum keyval, HashJoinTable hashtable){
-	 /* we will derive to n paritions with each parition is 32 bit (sizeof(int))
-	  * we use the method h = keyval*a % 32, with a is the position of the current partition
-	  */
-	 int i=0;
-	 int h;
-	 int maxPart = bitvector_size*256; //maximum number of partitions;
-	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
-		h = GET_4_BYTES(keyval)*i % 32;
-		// check the bitvector partition if bit h is also set:
-		if ((*curP & ( 1 << h)) == 0)
-			return 0;
-		++curP;
-	 }
-	 return 1;
- }
 
 /* ----------------------------------------------------------------
  *		ExecHashJoin

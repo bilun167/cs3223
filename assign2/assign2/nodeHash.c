@@ -48,6 +48,7 @@ static void ExecHashSkewTableInsert(HashJoinTable hashtable,
 static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 
  // cs3223 the bitHash method
+
  void bitHash(Datum keyval, HashJoinTable hashtable){
 	 switch (hash_method){
 	 case 1:
@@ -62,17 +63,52 @@ static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 	  */
 	 int i=0;
 	 int h;
+	 int flag = 0;
 	 int maxPart = bitvector_size*256;  // maximum number of partitions 
-	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
+	 uint32 *curP = hashtable->bitvector;
+	 for (i=1; i <= 2; ++i){
 		h = GET_4_BYTES(keyval)*i % 32;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
-		*curP = *curP | (1 << h);
+		if (i==1 && (*curP == 0))
+			flag = 1;
+		*curP = (*curP) | (1 << h);
+		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
+		flag = 0;
+		/*if (i==1)
+			printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
+		*/
 		// increment curP to the next partition
 		++curP;
 	 }
  }
+ // cs3223 the method to check the tuple S to the bit vector
+int bitCheck(Datum keyval, HashJoinTable hashtable){
+	switch (hash_method){
+	 case 1:
+		 return checkMeth1(keyval, hashtable);
+		 break;
+	 }
+}
 
+ int checkMeth1(Datum keyval, HashJoinTable hashtable){
+	 /* we will derive to n paritions with each parition is 32 bit (sizeof(int))
+	  * we use the method h = keyval*a % 32, with a is the position of the current partition
+	  */
+	 int i=0;
+	 int h;
+	 int maxPart = bitvector_size*256; //maximum number of partitions;
+	 int *curP = hashtable->bitvector;
+	 for (i=1; i <= maxPart; ++i){
+		h = GET_4_BYTES(keyval)*i % 32;
+		// check the bitvector partition if bit h is also set:
+		if ((*curP & ( 1 << h)) == 0){
+			printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
+			return 0;
+		}
+		++curP;
+	 }
+	 return 1;
+ }
 /* ----------------------------------------------------------------
  *		ExecHash
  *
@@ -321,7 +357,8 @@ ExecHashTableCreate(Hash *node, List *hashOperators, bool keepNulls)
 
 	// cs3223, allocate memory for bitvector
 	printf(" Allocating memory for bitvector \n");
-	hashtable->bitvector = (int*) palloc0(bitvector_size*1024*8);
+	hashtable->bitvector = (uint32*) palloc0(bitvector_size*1024*8);
+	printf("zero element: %d\n",hashtable->bitvector[0]);
 
 	/*
 	 * Get info about the hash functions to be used for each hash key. Also
@@ -570,6 +607,7 @@ ExecHashTableDestroy(HashJoinTable hashtable)
 	/* Release working memory (batchCxt is a child, so it goes away too) */
 	MemoryContextDelete(hashtable->hashCxt);
 
+	pfree(hashtable->bitvector);
 	/* And drop the control block */
 	pfree(hashtable);
 }
@@ -808,7 +846,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 	ListCell   *hk;
 	int			i = 0;
 	MemoryContext oldContext;
-	printf("Starting hash \n");
+	//printf("Starting hash \n");
 	/*
 	 * We reset the eval context each time to reclaim any memory leaked in the
 	 * hashkey expressions.
@@ -835,7 +873,9 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 		 * Get the join attribute value of the tuple
 		 */
 		keyval = ExecEvalExpr(keyexpr, econtext, &isNull, NULL);
-		printf("keyval: %d\n", GET_4_BYTES(keyval));
+		//printf("keyval: %d\n", GET_4_BYTES(keyval));
+		//elog(DEBUG1, "keyval: %d\n", GET_4_BYTES(keyval));
+		
 		/*
 		 * If the attribute is NULL, and the join operator is strict, then
 		 * this tuple cannot pass the join qual so we can reject it
@@ -854,13 +894,20 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 			if (hashtable->hashStrict[i] && !keep_nulls)
 			{
 				MemoryContextSwitchTo(oldContext);
-				printf("Ending hash \n");
+				//printf("Ending hash \n");
 				return false;	/* cannot match */
 			}
 			/* else, leave hashkey unmodified, equivalent to hashcode 0 */
 		}
 		else
 		{
+			// cs3223 , hash to bit vector
+			if (outer_tuple){
+				hashtable->filter = bitCheck(keyval, hashtable);
+			}else{
+				bitHash(keyval, hashtable);
+				hashtable->filter = 1;
+			}
 			/* Compute the hash function */
 			uint32		hkey;
 
@@ -874,7 +921,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 	MemoryContextSwitchTo(oldContext);
 
 	*hashvalue = hashkey;
-	printf("Ending hash \n");
+	//printf("Ending hash \n");
 	return true;
 }
 

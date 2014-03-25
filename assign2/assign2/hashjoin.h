@@ -161,7 +161,9 @@ typedef struct HashJoinTableData
 	MemoryContext batchCxt;		/* context for this-batch-only storage */
 
 	// cs3223, bitvector
-	int *bitvector;
+	uint32 *bitvector;
+
+	int filter ;
 }	HashJoinTableData;
 
 extern int bitvector_size;     /* cs3223 */
