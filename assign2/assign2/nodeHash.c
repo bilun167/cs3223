@@ -47,6 +47,31 @@ static void ExecHashSkewTableInsert(HashJoinTable hashtable,
 						int bucketNumber);
 static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 
+ // cs3223 the bitHash method
+ void bitHash(Datum keyval, HashJoinTable hashtable){
+	 switch (hash_method){
+	 case 1:
+		 hashMeth1(Datum keyval, HashJoinTable hashtable);
+		 break;
+	 }
+ }
+
+ void hashMeth1(Datum keyval, HashJoinTable hashtable){
+	 /* we will derive to n paritions with each parition is 32 bit (sizeof(int))
+	  * we use the method h = keyval*a % 32, with a is the position of the current partition
+	  */
+	 int i=0;
+	 int h;
+	 int maxPart = bitvector_size*256; (maximum number of partitions);
+	 int curP = hashtable->bitvector;
+	 for (i=1; i <= maxPart; ++i){
+		h = GET_4_BYTES(keyval)*i % 32;
+		// SET the bit at the hth position in the partition curP and OR with the bitvector
+		*curP = *curP | (1 << h);
+		// increment curP to the next partition
+		++curP;
+	 }
+ }
 
 /* ----------------------------------------------------------------
  *		ExecHash
@@ -293,6 +318,10 @@ ExecHashTableCreate(Hash *node, List *hashOperators, bool keepNulls)
 	hashtable->spaceUsedSkew = 0;
 	hashtable->spaceAllowedSkew =
 		hashtable->spaceAllowed * SKEW_WORK_MEM_PERCENT / 100;
+
+	// cs3223, allocate memory for bitvector
+	printf(" Allocating memory for bitvector \n");
+	hashtable->bitvector = (int*) palloc0(bitvector_size*1024*8);
 
 	/*
 	 * Get info about the hash functions to be used for each hash key. Also
@@ -779,7 +808,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 	ListCell   *hk;
 	int			i = 0;
 	MemoryContext oldContext;
-
+	printf("Starting hash \n");
 	/*
 	 * We reset the eval context each time to reclaim any memory leaked in the
 	 * hashkey expressions.
@@ -806,7 +835,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 		 * Get the join attribute value of the tuple
 		 */
 		keyval = ExecEvalExpr(keyexpr, econtext, &isNull, NULL);
-
+		printf("keyval: %d\n", GET_4_BYTES(keyval);
 		/*
 		 * If the attribute is NULL, and the join operator is strict, then
 		 * this tuple cannot pass the join qual so we can reject it
@@ -825,6 +854,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 			if (hashtable->hashStrict[i] && !keep_nulls)
 			{
 				MemoryContextSwitchTo(oldContext);
+				printf("Ending hash \n");
 				return false;	/* cannot match */
 			}
 			/* else, leave hashkey unmodified, equivalent to hashcode 0 */
@@ -844,6 +874,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 	MemoryContextSwitchTo(oldContext);
 
 	*hashvalue = hashkey;
+	printf("Ending hash \n");
 	return true;
 }
 
