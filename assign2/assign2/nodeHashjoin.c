@@ -225,12 +225,11 @@ ExecHashJoin(HashJoinState *node)
 						node->hj_JoinState = HJ_NEED_NEW_BATCH;
 					continue;
 				}
-
+				// cs3223 apply Bloom Filter before scanning for match:
+				if (hashtable->filter == 0)
+					continue;
 				econtext->ecxt_outertuple = outerTupleSlot;
 				node->hj_MatchedOuter = false;
-
-				// cs3223 apply Bloom Filter before scanning for match:
-
 
 				/*
 				 * Find the corresponding bucket for this tuple in the main
