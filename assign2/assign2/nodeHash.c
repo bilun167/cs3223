@@ -98,11 +98,11 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	 int h;
 	 int maxPart = bitvector_size*256; //maximum number of partitions;
 	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
+	 for (i=1; i <= 3; ++i){
 		h = GET_4_BYTES(keyval)*i % 32;
 		// check the bitvector partition if bit h is also set:
 		if ((*curP & ( 1 << h)) == 0){
-			printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
+			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}
 		++curP;
