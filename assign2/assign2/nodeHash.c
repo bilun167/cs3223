@@ -48,6 +48,10 @@ static void ExecHashSkewTableInsert(HashJoinTable hashtable,
 static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 
  // cs3223 the bitHash method
+void setKbit(uint32 *curP, int k)
+{
+	curP[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
+}
 
  void bitHash(Datum keyval, HashJoinTable hashtable){
 	 switch (hash_method){
@@ -58,30 +62,29 @@ static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
  }
 
  void hashMeth1(Datum keyval, HashJoinTable hashtable){
-	 /* we will derive to n paritions with each parition is 32 bit (sizeof(int))
-	  * we use the method h = keyval*a % 32, with a is the position of the current partition
+	 /* we will derive to n paritions with each parition is 1024 bits
+	  * we use the method h = keyval*a % 1024, with a is the position of the current partition
 	  */
 	 int i=0;
-	 int h;
-	 int flag = 0;
-	 int maxPart = bitvector_size*256;  // maximum number of partitions 
+	 int k;
+	 int maxPart = bitvector_size*8;  // maximum number of partitions 
 	 uint32 *curP = hashtable->bitvector;
-	 for (i=1; i <= 2; ++i){
-		h = GET_4_BYTES(keyval)*i % 32;
+	 for (i=1; i <= maxPart; ++i){
+		k = GET_4_BYTES(keyval)*i % 1024;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
-		if (i==1 && (*curP == 0))
-			flag = 1;
-		*curP = (*curP) | (1 << h);
+		setKbit(curP, k);
 		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
-		flag = 0;
 		/*if (i==1)
 			printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
 		*/
 		// increment curP to the next partition
-		++curP;
+		curP+=8;
 	 }
  }
  // cs3223 the method to check the tuple S to the bit vector
+ int checkKbit(uint32 *curP, int k){
+	 return ( (curP[k/32] & (1 << (k%32) )) != 0 ) ;    
+ }
 int bitCheck(Datum keyval, HashJoinTable hashtable){
 	switch (hash_method){
 	 case 1:
@@ -91,21 +94,18 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 }
 
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
-	 /* we will derive to n paritions with each parition is 32 bit (sizeof(int))
-	  * we use the method h = keyval*a % 32, with a is the position of the current partition
-	  */
 	 int i=0;
 	 int h;
-	 int maxPart = bitvector_size*256; //maximum number of partitions;
+	 int maxPart = bitvector_size*8;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
 	 for (i=1; i <= 3; ++i){
-		h = GET_4_BYTES(keyval)*i % 32;
+		h = GET_4_BYTES(keyval)*i % 1024;
 		// check the bitvector partition if bit h is also set:
-		if ((*curP & ( 1 << h)) == 0){
+		if (checkKbit(curP, h) == 0){
 			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}
-		++curP;
+		curP+=8;
 	 }
 	 return 1;
  }
@@ -356,9 +356,9 @@ ExecHashTableCreate(Hash *node, List *hashOperators, bool keepNulls)
 		hashtable->spaceAllowed * SKEW_WORK_MEM_PERCENT / 100;
 
 	// cs3223, allocate memory for bitvector
-	printf(" Allocating memory for bitvector \n");
+	//printf(" Allocating memory for bitvector \n");
 	hashtable->bitvector = (uint32*) palloc0(bitvector_size*1024*8);
-	printf("zero element: %d\n",hashtable->bitvector[0]);
+	//printf("zero element: %d\n",hashtable->bitvector[0]);
 
 	/*
 	 * Get info about the hash functions to be used for each hash key. Also
