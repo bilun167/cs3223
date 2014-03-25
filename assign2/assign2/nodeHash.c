@@ -67,10 +67,10 @@ void setKbit(uint32 *curP, int k)
 	  */
 	 int i=0;
 	 int k;
-	 int maxPart = bitvector_size;  // maximum number of partitions 
+	 int maxPart = bitvector_size/64;  // maximum number of partitions 
 	 uint32 *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
-		k = GET_4_BYTES(keyval)*i % 8192;
+		k = GET_4_BYTES(keyval)*i % 524288;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
 		setKbit(curP, k);
 		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
@@ -78,7 +78,7 @@ void setKbit(uint32 *curP, int k)
 			printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
 		*/
 		// increment curP to the next partition
-		curP+=256;
+		curP+=16384;
 	 }
  }
  // cs3223 the method to check the tuple S to the bit vector
@@ -96,17 +96,17 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
 	 int i=0;
 	 int h;
-	 int maxPart = bitvector_size;  // maximum number of partitions 
+	 int maxPart = bitvector_size/64;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
-		h = GET_4_BYTES(keyval)*i % 8192;
+		h = GET_4_BYTES(keyval)*i % 524288;
 		//printf("keyval: %d,  maxPart: %d h:%d\n", GET_4_BYTES(keyval), maxPart, h);
 		// check the bitvector partition if bit h is also set:
 		if (checkKbit(curP, h) == 0){
-			printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
+			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}
-		curP+=256;
+		curP+=16384;
 	 }
 	 return 1;
  }
