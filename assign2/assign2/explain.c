@@ -1809,6 +1809,9 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 						   "Buckets: %d  Batches: %d  Memory Usage: %ldkB\n",
 							 hashtable->nbuckets, hashtable->nbatch,
 							 spacePeakKb);
+			// cs3223 extend analyze
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfo(es->str, "Bit vector size: %dkB Hash method = %d \n", bitvector_size, hash_method);
 		}
 	}
 }
