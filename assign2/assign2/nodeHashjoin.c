@@ -226,8 +226,10 @@ ExecHashJoin(HashJoinState *node)
 					continue;
 				}
 				// cs3223 apply Bloom Filter before scanning for match:
-				if ((node->js.jointype != JOIN_ANTI) && (hashtable->filter == 0))
+				if ((node->js.jointype != JOIN_ANTI) && (hashtable->filter == 0)){
+					++hashtable->numBVfilter;
 					continue;
+				}
 				econtext->ecxt_outertuple = outerTupleSlot;
 				node->hj_MatchedOuter = false;
 
@@ -284,6 +286,8 @@ ExecHashJoin(HashJoinState *node)
 				{
 					/* out of matches; check for possible outer-join fill */
 					node->hj_JoinState = HJ_FILL_OUTER_TUPLE;
+					// cs3223 increment the number of Probe tuples that do not participate in join
+					++hashtable->numProbNotJoin;
 					continue;
 				}
 
