@@ -70,7 +70,10 @@ void setKbit(uint32 *curP, int k)
 	 int maxPart = bitvector_size/64;  // maximum number of partitions 
 	 uint32 *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
-		k = GET_4_BYTES(keyval)*i % 524288;
+		if (sizeof(keyval) <8)
+			k = GET_4_BYTES(keyval)*i % 524288;
+		else
+			k = GET_8_BYTES(keyval)*i % 524288;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
 		setKbit(curP, k);
 		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
@@ -95,14 +98,17 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
 	 int i=0;
-	 int h;
+	 int k;
 	 int maxPart = bitvector_size/64;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
 	 for (i=1; i <= maxPart; ++i){
-		h = GET_4_BYTES(keyval)*i % 524288;
+		if (sizeof(keyval) <8)
+			k = GET_4_BYTES(keyval)*i % 524288;
+		else
+			k = GET_8_BYTES(keyval)*i % 524288;
 		//printf("keyval: %d,  maxPart: %d h:%d\n", GET_4_BYTES(keyval), maxPart, h);
 		// check the bitvector partition if bit h is also set:
-		if (checkKbit(curP, h) == 0){
+		if (checkKbit(curP, k) == 0){
 			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}

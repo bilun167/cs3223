@@ -226,7 +226,7 @@ ExecHashJoin(HashJoinState *node)
 					continue;
 				}
 				// cs3223 apply Bloom Filter before scanning for match:
-				if (hashtable->filter == 0)
+				if ((node->js.jointype != JOIN_ANTI) && (hashtable->filter == 0))
 					continue;
 				econtext->ecxt_outertuple = outerTupleSlot;
 				node->hj_MatchedOuter = false;
