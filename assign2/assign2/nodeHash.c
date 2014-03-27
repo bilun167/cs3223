@@ -48,7 +48,7 @@ static void ExecHashSkewTableInsert(HashJoinTable hashtable,
 static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 
  // cs3223 the bitHash method
-void setKbit(uint32 *curP, int k)
+void setKbit(int *curP, int k)
 {
 	curP[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
 }
@@ -70,13 +70,14 @@ void setKbit(uint32 *curP, int k)
 	  */
 	 int i=0;
 	 int k;
-	 int maxPart = bitvector_size;  // maximum number of partitions 
+	 uint32 hashkey = 8192*bitvector_size;
+	 //int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
+	 //for (i=1; i <= maxPart; ++i){
 		if (sizeof(keyval) <8)
-			k = GET_4_BYTES(keyval)*i % 8192;
+			k = GET_4_BYTES(keyval) % hashkey;
 		else
-			k = GET_8_BYTES(keyval)*i % 8192;
+			k = GET_8_BYTES(keyval) % hashkey;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
 		setKbit(curP, k);
 		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
@@ -84,32 +85,30 @@ void setKbit(uint32 *curP, int k)
 			printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
 		*/
 		// increment curP to the next partition
-		curP+=256;
-	 }
+		//curP+=256;
+	 //}
  }
   
  //cs3223 fnv1 32bit
 void hashMeth2(Datum keyval, HashJoinTable hashtable) {
 	 //int *pS = keyval;
 	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
-	 int i = 0;
-	 int maxPart = bitvector_size;
-	 uint32_t hash = 2166136261;	//OFFSET for fnv32
-	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
-		 while (keyval > 0) {
-			hash *= 16777619;	//fnv32 PRIME
-			uint32_t k = GET_1_BYTE(keyval);
-			hash ^= k;
-			keyval = keyval >> 8; //shift right 1 byte
-		 }
-		 setKbit(curP, hash);
-		 curP += 256;
+	//printf("hashMeth2 ");
+	uint32 hashkey = 8192*bitvector_size;
+	unsigned int keyV = GET_4_BYTES(keyval);
+	unsigned int hash = OFFSET32;
+	int i=0;
+	for (i=0;i<4;i++){
+		hash = hash ^ (keyV & 0x000000ff);
+		hash = hash * PRIME32;
+		keyV = keyV >> 8;	
 	}
+	hash = hash % hashkey;
+	setKbit(hashtable->bitvector, hash);
  }
 
  // cs3223 the method to check the tuple S to the bit vector
- int checkKbit(uint32 *curP, int k){
+ int checkKbit(int *curP, int k){
 	 return ( (curP[k/32] & (1 << (k%32) )) != 0 ) ;    
  }
 int bitCheck(Datum keyval, HashJoinTable hashtable){
@@ -124,45 +123,55 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 }
 
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
-	 int i=0;
-	 int k;
-	 int maxPart = bitvector_size;  // maximum number of partitions 
+	 int k; 
+	 uint32 hashkey = 8192*bitvector_size;
 	 int *curP = hashtable->bitvector;
-	 for (i=1; i <= maxPart; ++i){
+	 //for (i=1; i <= maxPart; ++i){
 		if (sizeof(keyval) <8)
-			k = GET_4_BYTES(keyval)*i % 8192;
+			k = GET_4_BYTES(keyval) % hashkey;
 		else
-			k = GET_8_BYTES(keyval)*i % 8192;
+			k = GET_8_BYTES(keyval) % hashkey;
 		//printf("keyval: %d,  maxPart: %d h:%d\n", GET_4_BYTES(keyval), maxPart, h);
 		// check the bitvector partition if bit h is also set:
 		if (checkKbit(curP, k) == 0){
 			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}
-		curP+=256;
-	 }
+		//curP+=256;
+	 //}
 	 return 1;
  }
  
   int checkMeth2(Datum keyval, HashJoinTable hashtable){
-	 int i=0;
-	 int k;
-	 int maxPart = bitvector_size;  // maximum number of partitions 
-	 int *curP = hashtable->bitvector;
-	 uint32_t hash = 2166136261;	//OFFSET for fnv32
-	 for (i=1; i <= maxPart; ++i){
-		while (keyval > 0) {
-			hash *= 16777619;	//fnv32 PRIME
-			k = GET_1_BYTE(keyval);
-			hash ^= k;
-			keyval = keyval >> 8; //shift right 1 byte
-		}
-		if (checkKbit(curP, hash) == 0) 
-			return 0;
-		curP+=256;
-	 }
-	 return 1;
- }
+	  //printf("checkMeth2 ");
+	  /*unsigned int keyV = GET_4_BYTES(keyval);
+	  int i=0;
+	  unsigned int hash = OFFSET32;
+	  for (i=0;i<4;i++){
+		  hash = hash ^ (keyV & 0x000000ff);
+		  hash = hash * PRIME32;
+		  keyV = keyV >> 8;	
+	  }
+	  setKbit(hashtable->bitvector, hash);
+	  if (checkKbit(hashtable->bitvector, hash) == 0) 
+	  return 0;
+	  return 1;*/
+	  unsigned int keyV = GET_4_BYTES(keyval);
+	  unsigned int hash = OFFSET32;
+	  uint32 hashkey = 8192*bitvector_size;
+	  int i=0;
+	  for (i=0;i<4;i++){
+		  hash = hash ^ (keyV & 0x000000ff);
+		  hash = hash * PRIME32;
+		  keyV = keyV >> 8;	
+	  }
+	  hash = hash % hashkey;
+	  if (checkKbit(hashtable->bitvector, hash) == 0){
+		  //printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
+		  return 0;
+	  }
+	  return 1;
+  }
 
 /* ----------------------------------------------------------------
  *		ExecHash

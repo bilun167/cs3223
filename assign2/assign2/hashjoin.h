@@ -172,8 +172,12 @@ extern int bitvector_size;     /* cs3223 */
 extern int hash_method;        /* cs3223 */
 
 // cs3223 method to hash the value to the bit vector
-void setKbit(uint32 *curP, int k); 
-int checkKbit(uint32 *curP, int k);
+
+#define OFFSET32 2166136261
+#define PRIME32 16777619
+
+void setKbit(int *curP, int k); 
+int checkKbit(int *curP, int k);
 void bitHash(Datum keyval, HashJoinTable hashtable);
 void hashMeth1(Datum keyval, HashJoinTable hashtable);
 int bitCheck(Datum keyval, HashJoinTable hashtable);
