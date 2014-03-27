@@ -84,6 +84,27 @@ void setKbit(uint32 *curP, int k)
 		curP+=256;
 	 }
  }
+  
+ //cs3223 fnv1 32bit
+ unsigned int fnv(Datum keyval, HashJoinTable hashtable) {
+	 //int *pS = keyval;
+	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
+	 
+	 int maxPart = bitvector_size;
+	 uint32_t hash = 2166136261;	//OFFSET for fnv32
+	 int *curP = hashtable->bitvector;
+	 for (i=1; i <= maxPart; ++i){
+		 while (keyval > 0) {
+			hash *= 16777619;	//fnv32 PRIME
+			k = GET_1_BYTE(keyval);
+			hash ^= k;
+			keyval = keyval >> 8; //shift right 1 byte
+		 }
+		 setKbit(curP, hash);
+		 curP += 256;
+	}
+ }
+
  // cs3223 the method to check the tuple S to the bit vector
  int checkKbit(uint32 *curP, int k){
 	 return ( (curP[k/32] & (1 << (k%32) )) != 0 ) ;    
@@ -116,6 +137,7 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	 }
 	 return 1;
  }
+
 /* ----------------------------------------------------------------
  *		ExecHash
  *
