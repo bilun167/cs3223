@@ -89,7 +89,7 @@ void setKbit(uint32 *curP, int k)
  }
   
  //cs3223 fnv1 32bit
- unsigned int hashMeth2(Datum keyval, HashJoinTable hashtable) {
+void hashMeth2(Datum keyval, HashJoinTable hashtable) {
 	 //int *pS = keyval;
 	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
 	 
@@ -99,7 +99,7 @@ void setKbit(uint32 *curP, int k)
 	 for (i=1; i <= maxPart; ++i){
 		 while (keyval > 0) {
 			hash *= 16777619;	//fnv32 PRIME
-			k = GET_1_BYTE(keyval);
+			uint32_t k = GET_1_BYTE(keyval);
 			hash ^= k;
 			keyval = keyval >> 8; //shift right 1 byte
 		 }
@@ -117,8 +117,7 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	 case 1:
 		 return checkMeth1(keyval, hashtable);
 		 break;
-	 }
-	 case 1:
+	 case 2:
 		 return checkMeth2(keyval, hashtable);
 		 break;
 	 }

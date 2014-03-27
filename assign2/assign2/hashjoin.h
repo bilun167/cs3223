@@ -178,5 +178,7 @@ void bitHash(Datum keyval, HashJoinTable hashtable);
 void hashMeth1(Datum keyval, HashJoinTable hashtable);
 int bitCheck(Datum keyval, HashJoinTable hashtable);
 int checkMeth1(Datum keyval, HashJoinTable hashtable);
+void hashMeth2(Datum keyval, HashJoinTable hashtable);
+int checkMeth2(Datum keyval, HashJoinTable hashtable);
 
 #endif   /* HASHJOIN_H */
