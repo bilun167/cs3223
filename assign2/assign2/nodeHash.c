@@ -54,11 +54,14 @@ void setKbit(uint32 *curP, int k)
 }
 
  void bitHash(Datum keyval, HashJoinTable hashtable){
-	 switch (hash_method){
-	 case 1:
-		 hashMeth1(keyval, hashtable);
-		 break;
-	 }
+	switch (hash_method){
+		case 1:
+			hashMeth1(keyval, hashtable);
+			break;
+		case 2:
+			hashMeth2(keyval, hashtable);
+			break;
+	}
  }
 
  void hashMeth1(Datum keyval, HashJoinTable hashtable){
@@ -86,7 +89,7 @@ void setKbit(uint32 *curP, int k)
  }
   
  //cs3223 fnv1 32bit
- unsigned int fnv(Datum keyval, HashJoinTable hashtable) {
+ unsigned int hashMeth2(Datum keyval, HashJoinTable hashtable) {
 	 //int *pS = keyval;
 	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
 	 
@@ -115,6 +118,10 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 		 return checkMeth1(keyval, hashtable);
 		 break;
 	 }
+	 case 1:
+		 return checkMeth2(keyval, hashtable);
+		 break;
+	 }
 }
 
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
@@ -133,6 +140,25 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 			return 0;
 		}
+		curP+=256;
+	 }
+	 return 1;
+ }
+ 
+  int checkMeth2(Datum keyval, HashJoinTable hashtable){
+	 int i=0;
+	 int k;
+	 int maxPart = bitvector_size;  // maximum number of partitions 
+	 int *curP = hashtable->bitvector;
+	 for (i=1; i <= maxPart; ++i){
+		while (keyval > 0) {
+			hash *= 16777619;	//fnv32 PRIME
+			k = GET_1_BYTE(keyval);
+			hash ^= k;
+			keyval = keyval >> 8; //shift right 1 byte
+		}
+		if (checkKbit(curP, hash) == 0) 
+			return 0;
 		curP+=256;
 	 }
 	 return 1;
