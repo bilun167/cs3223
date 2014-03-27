@@ -92,7 +92,7 @@ void setKbit(uint32 *curP, int k)
 void hashMeth2(Datum keyval, HashJoinTable hashtable) {
 	 //int *pS = keyval;
 	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
-	 
+	 int i = 0;
 	 int maxPart = bitvector_size;
 	 uint32_t hash = 2166136261;	//OFFSET for fnv32
 	 int *curP = hashtable->bitvector;
@@ -149,6 +149,7 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	 int k;
 	 int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
+	 uint32_t hash = 2166136261;	//OFFSET for fnv32
 	 for (i=1; i <= maxPart; ++i){
 		while (keyval > 0) {
 			hash *= 16777619;	//fnv32 PRIME
