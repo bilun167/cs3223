@@ -10,15 +10,15 @@ do
 psql -e -v x=$i assign2 <<EOF
 	SET enable_nestloop TO FALSE;
 	SET enable_mergejoin TO FALSE;
-	SET work_mem TO 64; 
-    SET bitvector_size TO 128;
-    SET hash_method TO 1;
+	SET work_mem TO 64;
+    SET bitvector_size TO 512;
+    SET hash_method TO 2;
 	-- measure query running time
 	\timing on
-	SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= :x;
+	SELECT COUNT(*) FROM S WHERE NOT EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= :x);
 	\timing off
 	-- examine query plan
-	EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= :x;
+	EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE NOT EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= :x);
 	\q
 EOF
 done

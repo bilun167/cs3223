@@ -10,8 +10,8 @@ do
 psql -e -v x=$i assign2 <<EOF
 	SET enable_nestloop TO FALSE;
 	SET enable_mergejoin TO FALSE;
-	SET work_mem TO 64; 
-    SET bitvector_size TO 128;
+	SET work_mem TO 64;
+    SET bitvector_size TO 512;
     SET hash_method TO 1;
 	-- measure query running time
 	\timing on
