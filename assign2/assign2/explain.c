@@ -1810,12 +1810,15 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 							 hashtable->nbuckets, hashtable->nbatch,
 							 spacePeakKb);
 			// cs3223 extend analyze
+			int totalNotJoin = hashtable->numProbNotJoin + hashtable->numBVfilter;
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Bit vector size: %dkB Hash method = %d \n", bitvector_size, hash_method);
 			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "Probe tuples that do not participate in join: %d \n", hashtable->numProbNotJoin + hashtable->numBVfilter);
+			appendStringInfo(es->str, "Probe tuples that do not participate in join: %d \n", totalNotJoin);
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Probe tuples eliminated by bit vector: %d \n", hashtable->numBVfilter);
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfo(es->str, "Bit vector effectiveness: %f.2f%%\n", (totalNotJoin*1.0/hashtable->numBVfilter);
 		}
 	}
 }
