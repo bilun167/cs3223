@@ -162,6 +162,7 @@ typedef struct HashJoinTableData
 
 	// cs3223, bitvector
 	int *bitvector;
+	int firstCheck;	// a flag incase the tuple go through bloom filter and is probed with many inner tuples
 
 	int filter ;
 	uint32 numBVfilter;
