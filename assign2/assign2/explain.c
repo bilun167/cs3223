@@ -1818,7 +1818,7 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Probe tuples eliminated by bit vector: %d \n", hashtable->numBVfilter);
 			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "Bit vector effectiveness: %f.2f%%\n", (totalNotJoin*1.0/hashtable->numBVfilter);
+			appendStringInfo(es->str, "Bit vector effectiveness: %f.2f%%\n", (totalNotJoin*1.0/hashtable->numBVfilter));
 		}
 	}
 }
