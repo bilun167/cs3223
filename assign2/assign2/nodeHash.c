@@ -424,6 +424,7 @@ ExecHashTableCreate(Hash *node, List *hashOperators, bool keepNulls)
 	hashtable->bitvector = (int*) palloc0(bitvector_size*1024*8);
 	hashtable->numBVfilter = 0;
 	hashtable->numProbNotJoin = 0;
+	hashtable->firstCheck = 0;
 	//printf("zero element: %d\n",hashtable->bitvector[0]);
 
 	/*

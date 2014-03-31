@@ -230,6 +230,9 @@ ExecHashJoin(HashJoinState *node)
 					++hashtable->numBVfilter;
 					continue;
 				}
+				// indicate the the tuple is not checked yet
+				hashtable->firstCheck = 1;
+
 				econtext->ecxt_outertuple = outerTupleSlot;
 				node->hj_MatchedOuter = false;
 
@@ -287,9 +290,13 @@ ExecHashJoin(HashJoinState *node)
 					/* out of matches; check for possible outer-join fill */
 					node->hj_JoinState = HJ_FILL_OUTER_TUPLE;
 					// cs3223 increment the number of Probe tuples that do not participate in join
-					++hashtable->numProbNotJoin;
+					// first time check and already failed
+					if (hashtable->firstCheck)
+						++hashtable->numProbNotJoin;
 					continue;
 				}
+
+				hashtable->firstCheck = 0;
 
 				/*
 				 * We've got a match, but still need to test non-hashed quals.
