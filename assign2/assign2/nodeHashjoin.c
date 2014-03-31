@@ -226,9 +226,16 @@ ExecHashJoin(HashJoinState *node)
 					continue;
 				}
 				// cs3223 apply Bloom Filter before scanning for match:
-				if ((node->js.jointype != JOIN_ANTI) && (hashtable->filter == 0)){
+				hashtable->failFilter = 0;
+				if (hashtable->filter == 0){
 					++hashtable->numBVfilter;
-					continue;
+					// skip if it is not ANTI_JOIN
+					if (node->js.jointype != JOIN_ANTI)
+						continue;
+					hashtable->failFilter = 1;
+					// We don't need to update the numProbNotJoin as we already count here
+					// That means temporary decrement it, it will increment later
+					--hashtable->numProbNotJoin;
 				}
 				// indicate the the tuple is not checked yet
 				hashtable->firstCheck = 1;
@@ -285,7 +292,8 @@ ExecHashJoin(HashJoinState *node)
 				/*
 				 * Scan the selected hash bucket for matches to current outer
 				 */
-				if (!ExecScanHashBucket(node, econtext))
+				// cs3223 if we know already fail then don't need to scan hash bucket
+				if ((hashtable->failFilter) || (!ExecScanHashBucket(node, econtext)))
 				{
 					/* out of matches; check for possible outer-join fill */
 					node->hj_JoinState = HJ_FILL_OUTER_TUPLE;
