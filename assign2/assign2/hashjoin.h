@@ -162,11 +162,12 @@ typedef struct HashJoinTableData
 
 	// cs3223, bitvector
 	int *bitvector;
-	int firstCheck;	// a flag incase the tuple go through bloom filter and is probed with many inner tuples
+	int firstCheck;	// a flag in case the tuple go through bloom filter and is probed with many inner tuples
+	int failFilter; // flag to denote that the tuple doesn't pass the Bloom Filer but is kept because of ANTI_JOIN
 
 	int filter ;
 	uint32 numBVfilter;
-	uint32 numProbNotJoin;
+	uint32 numProbNotJoin;   // this one count the tuples that pass the filter but not match with any node in the inner relation
 }	HashJoinTableData;
 
 extern int bitvector_size;     /* cs3223 */
