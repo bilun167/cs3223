@@ -108,8 +108,6 @@ static void ExplainJSONLineEnding(ExplainState *es);
 static void ExplainYAMLLineStarting(ExplainState *es);
 static void escape_yaml(StringInfo buf, const char *str);
 
-
-
 /*
  * ExplainQuery -
  *	  execute an EXPLAIN command
@@ -1818,7 +1816,7 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Probe tuples eliminated by bit vector: %d \n", hashtable->numBVfilter);
 			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "Bit vector effectiveness: %.2f%\n", (hashtable->numBVfilter * 1.0 / totalNotJoin)*100);
+			appendStringInfo(es->str, "Bit vector effectiveness: %f.2f%%\n", (totalNotJoin*1.0/hashtable->numBVfilter);
 		}
 	}
 }

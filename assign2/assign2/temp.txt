@@ -1,0 +1,12 @@
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 64;
+SET
+SET bitvector_size TO 128;
+SET
+SET hash_method TO 2;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 12500;
