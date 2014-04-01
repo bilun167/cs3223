@@ -48,7 +48,7 @@ static void ExecHashSkewTableInsert(HashJoinTable hashtable,
 static void ExecHashRemoveNextSkewBucket(HashJoinTable hashtable);
 
  // cs3223 the bitHash method
-void setKbit(int *curP, int k)
+void setKbit(int *curP, long k)
 {
 	curP[k/32] |= 1 << (k%32);  // Set the bit at the k-th position in A[i]
 }
@@ -69,16 +69,18 @@ void setKbit(int *curP, int k)
 	  * we use the method h = keyval*a % 8192, with a is the position of the current partition
 	  */
 	 int i=0;
-	 int k;
-	 uint32 hashkey = 8192*bitvector_size;
+	 long k;
+	 long hashkey = 8192*bitvector_size;
 	 //int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
-	 printf("size of keyval: %d\n", sizeof(keyval));
+	 //printf("size of keyval: %d\n", sizeof(keyval));
 	 //for (i=1; i <= maxPart; ++i){
-		if (sizeof(keyval) <8)
-			k = GET_4_BYTES(keyval) % hashkey;
-		else
-			k = GET_8_BYTES(keyval) % hashkey;
+	/* printf("Hash\n");
+	 printf("%lu\n", keyval);*/
+	 if (sizeof(keyval) < 8)
+		 k = DatumGetInt32(keyval) % hashkey;
+	 else
+		 k = DatumGetInt64(keyval) % hashkey;
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
 		setKbit(curP, k);
 		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
@@ -99,20 +101,21 @@ void hashMeth2(Datum keyval, HashJoinTable hashtable) {
 	//printf("size of keyval: %d\n", sizeof(keyval));
 	int numOctal = sizeof(keyval);
 	if (numOctal < 8)
-		keyV = GET_4_BYTES(keyval);
+		keyV = DatumGetInt32(keyval);
 	else
-		keyV = GET_8_BYTES(keyval);
+		keyV = DatumGetInt64(keyval);
 	for (i=0;i<numOctal;i++){
 		hash = hash ^ (keyV & 0x000000ff);
 		hash = hash * PRIME32;
 		keyV = keyV >> 8;	
 	}
+	// Mapping method
 	hash = hash % hashkey;
 	setKbit(hashtable->bitvector, hash);
  }
 
  // cs3223 the method to check the tuple S to the bit vector
- int checkKbit(int *curP, int k){
+ int checkKbit(int *curP, long k){
 	 return ( (curP[k/32] & (1 << (k%32) )) != 0 ) ;    
  }
 int bitCheck(Datum keyval, HashJoinTable hashtable){
@@ -128,13 +131,15 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 
  int checkMeth1(Datum keyval, HashJoinTable hashtable){
 	 int k; 
-	 uint32 hashkey = 8192*bitvector_size;
+	 long hashkey = 8192*bitvector_size;
 	 int *curP = hashtable->bitvector;
 	 //for (i=1; i <= maxPart; ++i){
-		if (sizeof(keyval) <8)
-			k = GET_4_BYTES(keyval) % hashkey;
-		else
-			k = GET_8_BYTES(keyval) % hashkey;
+	 /*printf("Check\n");
+	 printf("%lu\n", keyval);*/
+	 if (sizeof(keyval) < 8)
+		 k = DatumGetInt32(keyval) % hashkey;
+	 else
+		 k = DatumGetInt64(keyval) % hashkey;
 		//printf("keyval: %d,  maxPart: %d h:%d\n", GET_4_BYTES(keyval), maxPart, h);
 		// check the bitvector partition if bit h is also set:
 		if (checkKbit(curP, k) == 0){
@@ -154,16 +159,16 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
 	//printf("size of keyval: %d\n", sizeof(keyval));
 	int numOctal = sizeof(keyval);
 	if (numOctal < 8)
-		keyV = GET_4_BYTES(keyval);
+		keyV = DatumGetInt32(keyval);
 	else
-		keyV = GET_8_BYTES(keyval);
-
-	  for (i=0;i<4;i++){
-		  hash = hash ^ (keyV & 0x000000ff);
-		  hash = hash * PRIME32;
-		  keyV = keyV >> 8;	
-	  }
-	  hash = hash % hashkey;
+		keyV = DatumGetInt64(keyval);
+	for (i=0;i<numOctal;i++){
+		hash = hash ^ (keyV & 0x000000ff);
+		hash = hash * PRIME32;
+		keyV = keyV >> 8;	
+	}
+	// Mapping method
+	hash = hash % hashkey;
 	  if (checkKbit(hashtable->bitvector, hash) == 0){
 		  //printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
 		  return 0;
