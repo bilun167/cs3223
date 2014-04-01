@@ -178,8 +178,8 @@ extern int hash_method;        /* cs3223 */
 #define OFFSET32 2166136261
 #define PRIME32 16777619
 
-void setKbit(int *curP, int k); 
-int checkKbit(int *curP, int k);
+void setKbit(int *curP, long k); 
+int checkKbit(int *curP, long k);
 void bitHash(Datum keyval, HashJoinTable hashtable);
 void hashMeth1(Datum keyval, HashJoinTable hashtable);
 int bitCheck(Datum keyval, HashJoinTable hashtable);
