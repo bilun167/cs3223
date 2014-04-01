@@ -73,6 +73,7 @@ void setKbit(int *curP, int k)
 	 uint32 hashkey = 8192*bitvector_size;
 	 //int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
+	 printf("size of keyval: %d\n", sizeof(keyval));
 	 //for (i=1; i <= maxPart; ++i){
 		if (sizeof(keyval) <8)
 			k = GET_4_BYTES(keyval) % hashkey;
@@ -91,14 +92,17 @@ void setKbit(int *curP, int k)
   
  //cs3223 fnv1 32bit
 void hashMeth2(Datum keyval, HashJoinTable hashtable) {
-	 //int *pS = keyval;
-	 //int *pE = ps + sizeof(keyval) / sizeof(int); //nobytes / 2 since each ptr increment add 2 for int type
-	//printf("hashMeth2 ");
 	uint32 hashkey = 8192*bitvector_size;
-	unsigned int keyV = GET_4_BYTES(keyval);
+	long keyV;
 	unsigned int hash = OFFSET32;
 	int i=0;
-	for (i=0;i<4;i++){
+	//printf("size of keyval: %d\n", sizeof(keyval));
+	int numOctal = sizeof(keyval);
+	if (numOctal < 8)
+		keyV = GET_4_BYTES(keyval);
+	else
+		keyV = GET_8_BYTES(keyval);
+	for (i=0;i<numOctal;i++){
 		hash = hash ^ (keyV & 0x000000ff);
 		hash = hash * PRIME32;
 		keyV = keyV >> 8;	
@@ -143,23 +147,17 @@ int bitCheck(Datum keyval, HashJoinTable hashtable){
  }
  
   int checkMeth2(Datum keyval, HashJoinTable hashtable){
-	  //printf("checkMeth2 ");
-	  /*unsigned int keyV = GET_4_BYTES(keyval);
-	  int i=0;
-	  unsigned int hash = OFFSET32;
-	  for (i=0;i<4;i++){
-		  hash = hash ^ (keyV & 0x000000ff);
-		  hash = hash * PRIME32;
-		  keyV = keyV >> 8;	
-	  }
-	  setKbit(hashtable->bitvector, hash);
-	  if (checkKbit(hashtable->bitvector, hash) == 0) 
-	  return 0;
-	  return 1;*/
-	  unsigned int keyV = GET_4_BYTES(keyval);
-	  unsigned int hash = OFFSET32;
-	  uint32 hashkey = 8192*bitvector_size;
-	  int i=0;
+	uint32 hashkey = 8192*bitvector_size;
+	long keyV;
+	unsigned int hash = OFFSET32;
+	int i=0;
+	//printf("size of keyval: %d\n", sizeof(keyval));
+	int numOctal = sizeof(keyval);
+	if (numOctal < 8)
+		keyV = GET_4_BYTES(keyval);
+	else
+		keyV = GET_8_BYTES(keyval);
+
 	  for (i=0;i<4;i++){
 		  hash = hash ^ (keyV & 0x000000ff);
 		  hash = hash * PRIME32;
