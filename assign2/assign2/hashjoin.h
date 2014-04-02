@@ -180,11 +180,11 @@ extern int hash_method;        /* cs3223 */
 
 void setKbit(int *curP, long k); 
 int checkKbit(int *curP, long k);
-void bitHash(Datum keyval, HashJoinTable hashtable);
-void hashMeth1(Datum keyval, HashJoinTable hashtable);
-int bitCheck(Datum keyval, HashJoinTable hashtable);
-int checkMeth1(Datum keyval, HashJoinTable hashtable);
-void hashMeth2(Datum keyval, HashJoinTable hashtable);
-int checkMeth2(Datum keyval, HashJoinTable hashtable);
+void bitHash(uint32 keyval, HashJoinTable hashtable);
+void hashMeth1(uint32 keyval, HashJoinTable hashtable);
+int bitCheck(uint32 keyval, HashJoinTable hashtable);
+int checkMeth1(uint32 keyval, HashJoinTable hashtable);
+void hashMeth2(uint32 keyval, HashJoinTable hashtable);
+int checkMeth2(uint32 keyval, HashJoinTable hashtable);
 
 #endif   /* HASHJOIN_H */
