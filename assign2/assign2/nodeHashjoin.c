@@ -225,7 +225,24 @@ ExecHashJoin(HashJoinState *node)
 						node->hj_JoinState = HJ_NEED_NEW_BATCH;
 					continue;
 				}
+				// cs3223 apply Bloom Filter before scanning for match:
+				hashtable->failFilter = 0;
+				hashtable->filter = bitCheck(hashvalue, hashtable);
+				if (hashtable->filter == 0){
+					++hashtable->numBVfilter;
+					// skip if it is not ANTI_JOIN
+					if (node->js.jointype != JOIN_ANTI)
+						continue;
+					hashtable->failFilter = 1;
+					// We don't need to update the numProbNotJoin as we already count here
+					// That means temporary decrement it, it will increment later
+					--hashtable->numProbNotJoin;
+				}
+				// indicate the the tuple is not checked yet
+				hashtable->firstCheck = 1;
 
+				econtext->ecxt_outertuple = outerTupleSlot;
+				node->hj_MatchedOuter = false;
 				/*
 				 * Find the corresponding bucket for this tuple in the main
 				 * hash table or skew hash table.
@@ -256,25 +273,6 @@ ExecHashJoin(HashJoinState *node)
 					continue;
 				}
 
-				
-				// cs3223 apply Bloom Filter before scanning for match:
-				hashtable->failFilter = 0;
-				hashtable->filter = bitCheck(node->hj_CurHashValue, hashtable);
-				if (hashtable->filter == 0){
-					++hashtable->numBVfilter;
-					// skip if it is not ANTI_JOIN
-					if (node->js.jointype != JOIN_ANTI)
-						continue;
-					hashtable->failFilter = 1;
-					// We don't need to update the numProbNotJoin as we already count here
-					// That means temporary decrement it, it will increment later
-					--hashtable->numProbNotJoin;
-				}
-				// indicate the the tuple is not checked yet
-				hashtable->firstCheck = 1;
-
-				econtext->ecxt_outertuple = outerTupleSlot;
-				node->hj_MatchedOuter = false;
 
 				/* OK, let's scan the bucket for matches */
 				node->hj_JoinState = HJ_SCAN_BUCKET;
@@ -440,7 +438,6 @@ ExecHashJoin(HashJoinState *node)
 				 */
 				if (!ExecHashJoinNewBatch(node))
 					return NULL;	/* end of join */
-				printf("NOT END OF JOIN\n");
 				node->hj_JoinState = HJ_NEED_NEW_OUTER;
 				break;
 

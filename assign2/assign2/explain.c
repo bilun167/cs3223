@@ -1811,6 +1811,7 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 							 spacePeakKb);
 			// cs3223 extend analyze
 			int totalNotJoin = hashtable->numProbNotJoin + hashtable->numBVfilter;
+			double percent = 0;
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Bit vector size: %dkB Hash method = %d \n", bitvector_size, hash_method);
 			appendStringInfoSpaces(es->str, es->indent * 2);
@@ -1818,7 +1819,9 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Probe tuples eliminated by bit vector: %d \n", hashtable->numBVfilter);
 			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "Bit vector effectiveness: %.2f%%\n", (hashtable->numBVfilter*1.0 / totalNotJoin)*100);
+			if (totalNotJoin)
+				percent = (hashtable->numBVfilter*1.0 / totalNotJoin)*100;
+			appendStringInfo(es->str, "Bit vector effectiveness: %.2f%%\n", percent);
 		}
 	}
 }

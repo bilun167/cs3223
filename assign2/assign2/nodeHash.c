@@ -70,26 +70,11 @@ void setKbit(int *curP, long k)
 	  */
 	 long k;
 	 long hashkey = 8192*bitvector_size;
-	 //int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
-	 //printf("size of keyval: %d\n", sizeof(keyval));
-	 //for (i=1; i <= maxPart; ++i){
-	 
-	 //int ss = 0;
-	 //int ss2 = datumGetSize(keyval, false, -2);
 
 	 k = keyval % hashkey;
-	 printf("Hash\n");
-	  printf("keyval:%lu , k:%u \n", keyval, k);
 		// SET the bit at the hth position in the partition curP and OR with the bitvector
 		setKbit(curP, k);
-		//printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
-		/*if (i==1)
-			printf("keyval: %d, curP: %d maxPart: %d h:%d\n", GET_4_BYTES(keyval), *curP, maxPart, h);
-		*/
-		// increment curP to the next partition
-		//curP+=256;
-	 //}
  }
   
  //cs3223 fnv1 32bit
@@ -116,7 +101,6 @@ void hashMeth2(uint32 keyval, HashJoinTable hashtable) {
 
  // cs3223 the method to check the tuple S to the bit vector
  int checkKbit(int *curP, long k){
-	 printf("inside checkKBit\n");
 	 return ( (curP[k/32] & (1 << (k%32) )) != 0 ) ;    
  }
 int bitCheck(uint32 keyval, HashJoinTable hashtable){
@@ -133,25 +117,13 @@ int bitCheck(uint32 keyval, HashJoinTable hashtable){
  int checkMeth1(uint32 keyval, HashJoinTable hashtable){
 	 long k;
 	 long hashkey = 8192*bitvector_size;
-	 //int maxPart = bitvector_size;  // maximum number of partitions 
 	 int *curP = hashtable->bitvector;
-	 //printf("size of keyval: %d\n", sizeof(keyval));
-	 //for (i=1; i <= maxPart; ++i){
-	 
-	 //int ss = 0;
-	 //int ss2 = datumGetSize(keyval, false, -2);
-
 	 k = keyval % hashkey;
-	 printf("Check\n");
-	  printf("keyval:%lu , k:%u \n", keyval, k);
-		//printf("keyval: %d,  maxPart: %d h:%d\n", GET_4_BYTES(keyval), maxPart, h);
-		// check the bitvector partition if bit h is also set:
-		if (checkKbit(curP, k) == 0){
-			//printf(" Filtered value: %d\n",GET_4_BYTES(keyval));
-			return 0;
-		}
-		//curP+=256;
-	 //}
+	  // check the bitvector partition if bit h is also set:
+	  if (checkKbit(curP, k) == 0){
+
+		  return 0;
+	  }
 	 return 1;
  }
  
@@ -990,7 +962,7 @@ ExecHashGetHashValue(HashJoinTable hashtable,
 
 	MemoryContextSwitchTo(oldContext);
 	if (outer_tuple){
-		hashtable->filter = bitCheck(hashkey, hashtable);
+		//hashtable->filter = bitCheck(hashkey, hashtable);
 	}else{
 		bitHash(hashkey, hashtable);
 		hashtable->filter = 1;
