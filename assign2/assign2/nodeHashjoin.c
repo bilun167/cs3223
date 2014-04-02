@@ -270,6 +270,11 @@ ExecHashJoin(HashJoinState *node)
 										  hashvalue,
 										&hashtable->outerBatchFile[batchno]);
 					/* Loop around, staying in HJ_NEED_NEW_OUTER state */
+					// cs3223, anti join will allowed to go through filter, but this one may mean that we are going to this tuple again
+					if (hashtable->failFilter){
+						--hashtable->numBVfilter;
+						++hashtable->numProbNotJoin;
+					}
 					continue;
 				}
 
