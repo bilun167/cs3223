@@ -1811,7 +1811,7 @@ show_hash_info(HashState *hashstate, ExplainState *es)
 							 spacePeakKb);
 			// cs3223 extend analyze
 			int totalNotJoin = hashtable->numProbNotJoin + hashtable->numBVfilter;
-			double percent = 0;
+			double percent = 100.0;
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Bit vector size: %dkB Hash method = %d \n", bitvector_size, hash_method);
 			appendStringInfoSpaces(es->str, es->indent * 2);
