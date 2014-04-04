@@ -4,8 +4,7 @@ OPTS= -Wall
 LIBS=-lresolv -ldl -lm
 # Modify PSQLPATH if necesssary
 #PSQLPATH=/home/alice/postgresql-9.3.2
-#PSQLPATH=/home/sadm/postgresql-9.3.2
-PSQLPATH=/home/nusstu/cs3223/postgresql-9.3.2
+PSQLPATH=/home/sadm/postgresql-9.3.2
 INCLUDE=-I$(PSQLPATH)/src/include     
 
 # compiles your modified version of postgresql code 
