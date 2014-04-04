@@ -226,13 +226,23 @@ ExecHashJoin(HashJoinState *node)
 					continue;
 				}
 				// cs3223 apply Bloom Filter before scanning for match:
-				if ((node->js.jointype != JOIN_ANTI) && (hashtable->filter == 0)){
+				hashtable->failFilter = 0;
+				hashtable->filter = bitCheck(hashvalue, hashtable);
+				if (hashtable->filter == 0){
 					++hashtable->numBVfilter;
-					continue;
+					// skip if it is not ANTI_JOIN
+					if (node->js.jointype != JOIN_ANTI)
+						continue;
+					hashtable->failFilter = 1;
+					// We don't need to update the numProbNotJoin as we already count here
+					// That means temporary decrement it, it will increment later
+					--hashtable->numProbNotJoin;
 				}
+				// indicate the the tuple is not checked yet
+				hashtable->firstCheck = 1;
+
 				econtext->ecxt_outertuple = outerTupleSlot;
 				node->hj_MatchedOuter = false;
-
 				/*
 				 * Find the corresponding bucket for this tuple in the main
 				 * hash table or skew hash table.
@@ -260,10 +270,14 @@ ExecHashJoin(HashJoinState *node)
 										  hashvalue,
 										&hashtable->outerBatchFile[batchno]);
 					/* Loop around, staying in HJ_NEED_NEW_OUTER state */
+					// cs3223, anti join will allowed to go through filter, but this one may mean that we are going to this tuple again
+					if (hashtable->failFilter){
+						--hashtable->numBVfilter;
+						++hashtable->numProbNotJoin;
+					}
 					continue;
 				}
 
-				
 
 				/* OK, let's scan the bucket for matches */
 				node->hj_JoinState = HJ_SCAN_BUCKET;
@@ -282,14 +296,19 @@ ExecHashJoin(HashJoinState *node)
 				/*
 				 * Scan the selected hash bucket for matches to current outer
 				 */
-				if (!ExecScanHashBucket(node, econtext))
+				// cs3223 if we know already fail then don't need to scan hash bucket
+				if ((hashtable->failFilter) || (!ExecScanHashBucket(node, econtext)))
 				{
 					/* out of matches; check for possible outer-join fill */
 					node->hj_JoinState = HJ_FILL_OUTER_TUPLE;
 					// cs3223 increment the number of Probe tuples that do not participate in join
-					++hashtable->numProbNotJoin;
+					// first time check and already failed
+					if (hashtable->firstCheck)
+						++hashtable->numProbNotJoin;
 					continue;
 				}
+
+				hashtable->firstCheck = 0;
 
 				/*
 				 * We've got a match, but still need to test non-hashed quals.

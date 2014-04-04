@@ -162,10 +162,12 @@ typedef struct HashJoinTableData
 
 	// cs3223, bitvector
 	int *bitvector;
+	int firstCheck;	// a flag in case the tuple go through bloom filter and is probed with many inner tuples
+	int failFilter; // flag to denote that the tuple doesn't pass the Bloom Filer but is kept because of ANTI_JOIN
 
 	int filter ;
 	uint32 numBVfilter;
-	uint32 numProbNotJoin;
+	uint32 numProbNotJoin;   // this one count the tuples that pass the filter but not match with any node in the inner relation
 }	HashJoinTableData;
 
 extern int bitvector_size;     /* cs3223 */
@@ -176,13 +178,13 @@ extern int hash_method;        /* cs3223 */
 #define OFFSET32 2166136261
 #define PRIME32 16777619
 
-void setKbit(int *curP, int k); 
-int checkKbit(int *curP, int k);
-void bitHash(Datum keyval, HashJoinTable hashtable);
-void hashMeth1(Datum keyval, HashJoinTable hashtable);
-int bitCheck(Datum keyval, HashJoinTable hashtable);
-int checkMeth1(Datum keyval, HashJoinTable hashtable);
-void hashMeth2(Datum keyval, HashJoinTable hashtable);
-int checkMeth2(Datum keyval, HashJoinTable hashtable);
+void setKbit(int *curP, long k); 
+int checkKbit(int *curP, long k);
+void bitHash(uint32 keyval, HashJoinTable hashtable);
+void hashMeth1(uint32 keyval, HashJoinTable hashtable);
+int bitCheck(uint32 keyval, HashJoinTable hashtable);
+int checkMeth1(uint32 keyval, HashJoinTable hashtable);
+void hashMeth2(uint32 keyval, HashJoinTable hashtable);
+int checkMeth2(uint32 keyval, HashJoinTable hashtable);
 
 #endif   /* HASHJOIN_H */
