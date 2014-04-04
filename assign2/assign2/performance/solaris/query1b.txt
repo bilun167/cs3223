@@ -1,0 +1,180 @@
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 192;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 1017.387 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=40131.00..40131.01 rows=1 width=0) (actual time=13549.895..13549.899 rows=1 loops=1)
+   ->  Hash Join  (cost=2488.41..38888.88 rows=496847 width=0) (actual time=475.953..11665.133 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.019..4202.615 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=475.626..475.626 rows=50000 loops=1)
+               Buckets: 1024  Batches: 8  Memory Usage: 148kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.018..245.972 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 13549.966 ms
+(10 rows)
+
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 320;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 987.498 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=40131.00..40131.01 rows=1 width=0) (actual time=12696.599..12696.601 rows=1 loops=1)
+   ->  Hash Join  (cost=2488.41..38888.88 rows=496847 width=0) (actual time=437.516..10895.002 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.019..3880.494 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=437.328..437.328 rows=50000 loops=1)
+               Buckets: 2048  Batches: 4  Memory Usage: 297kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.017..225.957 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 12696.739 ms
+(10 rows)
+
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 576;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 1007.380 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=36381.00..36381.01 rows=1 width=0) (actual time=12790.784..12790.788 rows=1 loops=1)
+   ->  Hash Join  (cost=2488.41..35138.88 rows=496847 width=0) (actual time=428.325..11096.771 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.020..4120.880 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=428.204..428.204 rows=50000 loops=1)
+               Buckets: 4096  Batches: 4  Memory Usage: 300kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.028..221.050 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 12790.851 ms
+(10 rows)
+
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 1088;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 864.386 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=36381.00..36381.01 rows=1 width=0) (actual time=12969.189..12969.194 rows=1 loops=1)
+   ->  Hash Join  (cost=2488.41..35138.88 rows=496847 width=0) (actual time=427.377..11134.902 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.020..4130.355 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=427.316..427.316 rows=50000 loops=1)
+               Buckets: 8192  Batches: 2  Memory Usage: 593kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.019..220.130 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 12969.402 ms
+(10 rows)
+
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 2112;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 909.414 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=32953.00..32953.01 rows=1 width=0) (actual time=13202.158..13202.161 rows=1 loops=1)
+   ->  Hash Join  (cost=2317.41..31710.88 rows=496847 width=0) (actual time=588.109..11316.634 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.018..4059.631 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=588.062..588.062 rows=50000 loops=1)
+               Buckets: 8192  Batches: 1  Memory Usage: 1172kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.021..315.843 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 13202.478 ms
+(10 rows)
+
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 4160;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+ count  
+--------
+ 500000
+(1 row)
+
+Time: 902.190 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=32953.00..32953.01 rows=1 width=0) (actual time=12913.551..12913.555 rows=1 loops=1)
+   ->  Hash Join  (cost=2317.41..31710.88 rows=496847 width=0) (actual time=436.403..11012.605 rows=500000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.018..3978.004 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49953 width=4) (actual time=436.342..436.342 rows=50000 loops=1)
+               Buckets: 8192  Batches: 1  Memory Usage: 1172kB
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49953 width=4) (actual time=0.021..227.128 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 12913.793 ms
+(10 rows)
+
