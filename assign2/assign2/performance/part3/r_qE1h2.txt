@@ -1,0 +1,38 @@
+SET enable_nestloop TO FALSE;
+SET
+SET enable_mergejoin TO FALSE;
+SET
+SET work_mem TO 64;
+SET
+SET hash_method TO 2;
+SET
+SET bitvector_size TO 512;
+SET
+Timing is on.
+SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+  count  
+---------
+ 4000000
+(1 row)
+
+Time: 48750.646 ms
+Timing is off.
+EXPLAIN ANALYZE SELECT COUNT(*) FROM R, S WHERE R.A = S.A AND R.B <= 50000;
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=270570.89..270570.90 rows=1 width=0) (actual time=57148.002..57148.003 rows=1 loops=1)
+   ->  Hash Join  (cost=2513.54..260578.32 rows=3997025 width=0) (actual time=385.999..53215.349 rows=4000000 loops=1)
+         Hash Cond: (s.a = r.a)
+         ->  Seq Scan on s  (cost=0.00..115398.69 rows=7999969 width=4) (actual time=4.151..17859.638 rows=8000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49963 width=4) (actual time=376.964..376.964 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
+               Bit vector size: 512kB Hash method = 2 
+               Probe tuples that do not participate in join: 4000000
+               Probe tuples eliminated by bit vector: 3952320 
+               Bit vector effectiveness: 98.81%
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49963 width=4) (actual time=1.478..225.983 rows=50000 loops=1)
+                     Filter: (b <= 50000)
+                     Rows Removed by Filter: 50000
+ Total runtime: 57148.302 ms
+(14 rows)
+
