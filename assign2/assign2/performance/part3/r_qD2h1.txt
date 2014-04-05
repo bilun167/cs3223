@@ -15,25 +15,25 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 894.461 ms
+Time: 6593.090 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=11665.701..11665.704 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=419.162..9996.411 rows=500000 loops=1)
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=6931.845..6931.846 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=479.155..6474.563 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.023..3621.588 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=417.307..417.307 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.219..1986.875 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=474.616..474.616 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 128kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 477000 
                Bit vector effectiveness: 95.40%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.027..216.248 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=1.406..291.860 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 11665.972 ms
+ Total runtime: 6932.097 ms
 (14 rows)
 
 SET enable_nestloop TO FALSE;
@@ -53,25 +53,25 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 1030.477 ms
+Time: 5640.286 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=16301.026..16301.029 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=615.279..14215.700 rows=500000 loops=1)
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=7138.080..7138.080 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=331.370..6610.295 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.027..5371.829 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=612.747..612.747 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.189..1941.211 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=327.274..327.274 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 256kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 488340 
                Bit vector effectiveness: 97.67%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.035..314.755 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=0.187..188.579 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 16301.495 ms
+ Total runtime: 7138.300 ms
 (14 rows)
 
 SET enable_nestloop TO FALSE;
@@ -91,25 +91,25 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 933.044 ms
+Time: 6499.758 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=30409.935..30409.959 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=411.645..25661.347 rows=500000 loops=1)
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=7187.171..7187.171 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=461.941..6693.602 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.022..9614.222 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=409.051..409.051 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.210..2005.552 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=456.803..456.803 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 512kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 494230 
                Bit vector effectiveness: 98.85%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.047..209.887 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=1.474..271.249 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 30411.775 ms
+ Total runtime: 7187.430 ms
 (14 rows)
 
 SET enable_nestloop TO FALSE;
@@ -129,25 +129,25 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 2792.453 ms
+Time: 6257.268 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=32933.162..32933.186 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=1185.438..28130.115 rows=500000 loops=1)
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=7281.026..7281.026 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=358.100..6827.054 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.065..10458.329 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=1171.141..1171.141 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.178..2190.319 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=350.897..350.897 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 1024kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 496970 
                Bit vector effectiveness: 99.39%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.188..592.560 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=0.202..198.831 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 32936.348 ms
+ Total runtime: 7281.237 ms
 (14 rows)
 
 SET enable_nestloop TO FALSE;
@@ -167,25 +167,25 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 2924.749 ms
+Time: 5964.972 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=33005.879..33005.882 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=1204.389..28317.669 rows=500000 loops=1)
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=7812.136..7812.137 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=481.865..7263.447 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.319..10400.799 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=1179.209..1179.209 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.207..2110.020 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=469.927..469.927 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 2048kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 498510 
                Bit vector effectiveness: 99.70%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.158..586.597 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=0.220..260.552 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 33011.820 ms
+ Total runtime: 7812.384 ms
 (14 rows)
 
 SET enable_nestloop TO FALSE;
@@ -205,24 +205,24 @@ SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 
  500000
 (1 row)
 
-Time: 2998.433 ms
+Time: 6612.984 ms
 Timing is off.
 EXPLAIN ANALYZE SELECT COUNT(*) FROM S WHERE EXISTS (SELECT * FROM R WHERE R.A = S.A AND R.B <= 50000);
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=33941.51..33941.52 rows=1 width=0) (actual time=33098.750..33098.753 rows=1 loops=1)
-   ->  Hash Semi Join  (cost=2487.39..32708.94 rows=493025 width=0) (actual time=1209.628..28379.237 rows=500000 loops=1)
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=34986.38..34986.39 rows=1 width=0) (actual time=7036.630..7036.631 rows=1 loops=1)
+   ->  Hash Semi Join  (cost=2509.78..33750.35 rows=494414 width=0) (actual time=365.404..6589.097 rows=500000 loops=1)
          Hash Cond: (s.a = r.a)
-         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.090..10313.224 rows=1000000 loops=1)
-         ->  Hash  (cost=1693.00..1693.00 rows=49871 width=4) (actual time=1158.523..1158.523 rows=50000 loops=1)
-               Buckets: 1024  Batches: 32  Memory Usage: 39kB
+         ->  Seq Scan on s  (cost=0.00..14425.00 rows=1000000 width=4) (actual time=0.158..2005.123 rows=1000000 loops=1)
+         ->  Hash  (cost=1693.00..1693.00 rows=49742 width=4) (actual time=346.005..346.005 rows=50000 loops=1)
+               Buckets: 1024  Batches: 32  Memory Usage: 45kB
                Bit vector size: 4096kB Hash method = 1 
                Probe tuples that do not participate in join: 500000
                Probe tuples eliminated by bit vector: 499290 
                Bit vector effectiveness: 99.86%
-               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49871 width=4) (actual time=0.139..569.420 rows=50000 loops=1)
+               ->  Seq Scan on r  (cost=0.00..1693.00 rows=49742 width=4) (actual time=0.210..194.659 rows=50000 loops=1)
                      Filter: (b <= 50000)
                      Rows Removed by Filter: 50000
- Total runtime: 33107.672 ms
+ Total runtime: 7036.880 ms
 (14 rows)
 
