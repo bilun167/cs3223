@@ -400,7 +400,7 @@ ExecHashTableCreate(Hash *node, List *hashOperators, bool keepNulls)
 
 	// cs3223, allocate memory for bitvector
 	//printf(" Allocating memory for bitvector \n");
-	hashtable->bitvector = (int*) palloc0(bitvector_size*1024*8);
+	hashtable->bitvector = (int*) palloc0(bitvector_size*1024); // sizeof(int)/32  = 1/8
 	hashtable->numBVfilter = 0;
 	hashtable->numProbNotJoin = 0;
 	hashtable->firstCheck = 0;
